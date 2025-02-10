@@ -1,6 +1,6 @@
 # mechadealer
 
-### Table of Contents 0
+### Table of Contents
 
 1. [Overview](./overview.md)
 2. [System Analysis](./system-analysis.md)
