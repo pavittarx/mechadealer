@@ -25,7 +25,9 @@ The software engineering paradigm applied will be the **Agile methodology**.
 
 ### Application Architecture
 
-[Conceptual Diagram]
+![Conceptual Diagram](./diagrams/conceptual-architecture.png)
+
+<center>Conceptual Diagram</center>
 
 [Logical Diagram]
 
