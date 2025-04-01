@@ -5,8 +5,21 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "nox>=2025.2.9",
     "ntplib>=0.4.0",
+    "pyright>=1.1.398",
+    "pytest>=8.3.5",
     "python-dotenv>=1.1.0",
     "questdb[dataframe]>=2.0.3",
     "ruff>=0.11.2",
+    "uvicorn>=0.34.0",
 ]
+
+# When packaging the code, it should include everything under the mechadealer namespace.
+packages= [
+    { include = "mechadealer" },
+]
+
+[tools.pyright]
+reportMissingTypeArgument = true  # Report generic classes used without type arguments
+strictListInference = true  # Use union types when inferring types of lists elements, instead of Any

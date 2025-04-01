@@ -1,3 +1,6 @@
 containers/questdb_data/*
 .env
 **/__pycache__/**/*
+.ruff_cache
+.venv
+snippets
