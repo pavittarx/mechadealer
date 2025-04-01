@@ -1,0 +1,3 @@
+containers/questdb_data/*
+.env
+**/__pycache__/**/*

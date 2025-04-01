@@ -1,0 +1,21 @@
+version: "3.8"
+services:
+  questdb:
+    image: questdb/questdb:latest
+    container_name: questdb
+    ports:
+      - "9000:9000" # Web Console (UI), REST API
+      - "9009:9009" # InfluxDB Line Protocol (ILP)
+      - "8812:8812" # PGWire
+      - "9003:9003" # Min Health Server
+    volumes:
+      - ./questdb_data:/var/lib/questdb
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100" # Loki REST API
+    volumes:
+      - ./loki_data:/var/lib/loki/data
+      - ./loki_config:/etc/loki
+    command: "-config.file=/etc/loki/loki-config.yaml"
