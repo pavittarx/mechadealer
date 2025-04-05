@@ -1,25 +1,31 @@
 [project]
-name = "mechadealer"
-version = "0.1.0"
+dependencies = [
+  "asyncio>=3.4.3",
+  "asyncpg>=0.30.0",
+  "eodhd>=1.0.32",
+  "nox>=2025.2.9",
+  "ntplib>=0.4.0",
+  "pendulum>=3.0.0",
+  "pyright>=1.1.398",
+  "pytest>=8.3.5",
+  "python-dotenv>=1.1.0",
+  "questdb[dataframe]>=2.0.3",
+  "requests>=2.32.3",
+  "upstox-python-sdk>=2.14.0",
+  "uvicorn>=0.34.0",
+]
 description = "Add your description here"
+name = "mechadealer"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "nox>=2025.2.9",
-    "ntplib>=0.4.0",
-    "pyright>=1.1.398",
-    "pytest>=8.3.5",
-    "python-dotenv>=1.1.0",
-    "questdb[dataframe]>=2.0.3",
-    "ruff>=0.11.2",
-    "uvicorn>=0.34.0",
-]
+version = "0.1.0"
 
-# When packaging the code, it should include everything under the mechadealer namespace.
-packages= [
-    { include = "mechadealer" },
-]
+[tool.uv.workspace]
+members = ["projects/*"]
+
+[dependency-groups]
+dev = ["pyright>=1.1.398", "ruff>=0.11.2"]
 
 [tools.pyright]
-reportMissingTypeArgument = true  # Report generic classes used without type arguments
-strictListInference = true  # Use union types when inferring types of lists elements, instead of Any
+reportMissingTypeArgument = true
+strictListInference = true
