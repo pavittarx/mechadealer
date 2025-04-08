@@ -195,7 +195,23 @@ wheels = [
 [[package]]
 name = "datastore"
 version = "0.1.0"
-source = { virtual = "projects/datastore" }
+source = { editable = "projects/datastore" }
+dependencies = [
+    { name = "asyncpg" },
+    { name = "pandas" },
+    { name = "python-dotenv" },
+    { name = "questdb", extra = ["dataframe"] },
+    { name = "upstox-python-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "pandas", specifier = ">=2.0.0" },
+    { name = "python-dotenv", specifier = ">=1.1.0" },
+    { name = "questdb", extras = ["dataframe"], specifier = ">=2.0.3" },
+    { name = "upstox-python-sdk", specifier = ">=2.14.0" },
+]
 
 [[package]]
 name = "dependency-groups"

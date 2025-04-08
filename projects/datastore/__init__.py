@@ -1,4 +1,4 @@
 from .db import Database
-from .init import init_database
+from .sources.upstox import UpstoxDataSource
 
-__all__ = ["Database", "init_database"]
+__all__ = ["Database", "UpstoxDataSource"]
