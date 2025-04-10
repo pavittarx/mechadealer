@@ -5,7 +5,8 @@ import asyncio
 
 async def main():
     await Database.init_database()
-    print("Database initialized successfully!")
+    upstox = UpstoxDataSource(Database)
+    await upstox.fetch_instruments()
 
 
 if __name__ == "__main__":

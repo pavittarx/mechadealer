@@ -2,7 +2,6 @@ import requests
 import gzip
 import json
 import pandas as pd
-from datetime import datetime
 
 
 def format_instruments(data):
@@ -16,6 +15,9 @@ def format_instruments(data):
         axis="columns",
     )
 
+    df["type"] = ""
+    df["active"] = True
+
     df = df[
         [
             "ticker",
@@ -24,16 +26,28 @@ def format_instruments(data):
             "segment",
             "exchange_token",
             "instrument_key",
-            # "type",
+            "type",
             "lot_size",
             "multiplier",
-            # "active",
+            "active",
         ]
     ]
 
     df["exchange"] = "NSE"
     df["market"] = "IN"
-    df["updated_at"] = datetime.now()
+
+    default_values = {
+        "multiplier": 0,
+        "lot_size": 0,
+        "tick_size": 0,
+        "type": "",
+        "name": "",
+        "segment": "",
+        "instrument_key": "",
+        "exchange_token": 0,
+    }
+
+    df.fillna(default_values, inplace=True)
 
     return df
 

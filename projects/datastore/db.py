@@ -9,51 +9,66 @@ load_dotenv()
 class Database:
     _pool = None
     _sender = None
+    _init = False
+
+    @classmethod
+    def check_init(cls):
+        if not cls._init:
+            raise Exception("Database not initialized")
 
     @classmethod
     async def init_database(cls):
-        conn = await cls.get_connection()
+        if cls._pool is None:
+            cls._pool = await asyncpg.create_pool(
+                os.getenv("QDB_CONNECTION_STRING"), min_size=5, max_size=20
+            )
 
-        # Symbols table (low cardinality)
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS symbols (
-                ticker SYMBOL,
-                tick_size DOUBLE,
-                name SYMBOL,
-                segment SYMBOL,
-                market SYMBOL,
-                exchange SYMBOL,
-                exchange_token SYMBOL,
-                instrument_key SYMBOL,
-                type SYMBOL,
-                lot_size LONG,
-                multiplier DOUBLE,
-                active BOOLEAN,
-                updated_at TIMESTAMP,
-                created_at TIMESTAMP
-            );
-        """)
+        conn = await cls._pool.acquire()
 
-        # Market data table (high cardinality)
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS market_data (
-                ticker SYMBOL,
-                timestamp TIMESTAMP,
-                open DOUBLE,
-                high DOUBLE,
-                low DOUBLE,
-                close DOUBLE,
-                volume LONG
-                ) timestamp(timestamp) 
-            PARTITION BY DAY;
-        """)
+        try:
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS symbols (
+                    ticker SYMBOL,
+                    tick_size DOUBLE,
+                    name SYMBOL,
+                    segment SYMBOL,
+                    market SYMBOL,
+                    exchange SYMBOL,
+                    exchange_token SYMBOL,
+                    instrument_key SYMBOL,
+                    type SYMBOL,
+                    lot_size LONG,
+                    multiplier DOUBLE,
+                    active BOOLEAN,
+                    updated_at TIMESTAMP,
+                    created_at TIMESTAMP
+                );
+            """)
 
-        await conn.close()
+            # Market data table (high cardinality)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS market_data (
+                    ticker SYMBOL,
+                    ts TIMESTAMP,
+                    open DOUBLE,
+                    high DOUBLE,
+                    low DOUBLE,
+                    close DOUBLE,
+                    volume LONG
+                ) 
+                timestamp(ts) 
+                PARTITION BY DAY WAL
+                DEDUP UPSERT KEYS(ts, ticker);
+            """)
 
-        return True
+            cls._init = True
+        finally:
+            await cls._pool.release(conn)
 
     @classmethod
     async def get_pool(cls):
+        cls.check_init()
+
         if cls._pool is None:
             cls._pool = await asyncpg.create_pool(
                 os.getenv("QDB_CONNECTION_STRING"), min_size=5, max_size=20
@@ -66,9 +81,9 @@ class Database:
         return await pool.acquire()
 
     @classmethod
-    async def get_sender(cls):
+    def get_sender(cls):
         if cls._sender is None:
-            cls._sender = await Sender.from_conf(os.getenv("QDB_CLIENT_CONF"))
+            cls._sender = Sender.from_conf(os.getenv("QDB_CLIENT_CONF"))
         return cls._sender
 
     @classmethod
