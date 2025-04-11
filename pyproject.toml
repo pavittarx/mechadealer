@@ -24,7 +24,11 @@ version = "0.1.0"
 members = ["projects/*"]
 
 [dependency-groups]
-dev = ["pyright>=1.1.398", "ruff>=0.11.2"]
+dev = [
+    "pyright>=1.1.398",
+ "ruff>=0.11.2",
+ "typing>=3.10.0.0",
+]
 
 [tools.pyright]
 reportMissingTypeArgument = true

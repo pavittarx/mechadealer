@@ -1,16 +1,8 @@
-import os
-import dotenv
-
 from datetime import datetime
-import upstox_client as upstox
-import numpy as np
-# from upstox_client.rest import ApiException
+from typing import Literal
 
 from .symbols import get_nse_instruments, get_bse_instruments
-
-dotenv.load_dotenv()
-config = upstox.Configuration(sandbox=True)
-config.access_token = os.getenv("UPSTOX_ACCESS_TOKEN") or ""
+from .fetcher import fetch_historical_data
 
 
 class UpstoxDataSource:
@@ -129,5 +121,20 @@ class UpstoxDataSource:
         await self.__fetch_nse_instruments()
         await self.__fetch_bse_instruments()
 
-    async def fetch_data(self, symbol, interval, start_date, end_date):
-        pass
+    async def fetch_data(
+        self,
+        ticker: str,
+        interval: Literal["1M", "2M", "5M", "15M", "30M", "1H", "4H", "D"],
+        end_date: datetime,
+        start_date: datetime | None = None,
+    ):
+        conn = await self.db.get_connection()
+        query = f"SELECT * from symbols WHERE ticker='{ticker}';"
+        result = await conn.fetch(query)
+
+        if result is None:
+            raise Exception(f"Provided ticker {ticker} does not exist.")
+
+        result = result[0]
+
+        fetch_historical_data(result["instrument_key"], end_date, start_date)
