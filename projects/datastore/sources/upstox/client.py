@@ -1,4 +1,3 @@
-import os
 from dotenv import load_dotenv
 import pandas as pd
 from datetime import date, datetime
@@ -10,8 +9,6 @@ load_dotenv()
 class UpstoxClient:
     def __init__(self):
         self.BASE_URL = "https://api-v2.upstox.com"
-        # self.UPSTOX_API_KEY = config["UPSTOX_API_KEY"]
-        # self.UPSTOX_API_SECRET = config["UPSTOX_API_SECRET"]
 
     def fetch_historical_data(
         self,

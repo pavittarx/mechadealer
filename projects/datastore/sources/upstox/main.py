@@ -2,14 +2,15 @@ from datetime import datetime
 from typing import Literal
 
 from .symbols import get_nse_instruments, get_bse_instruments
-from .fetcher import fetch_historical_data
+from .client import UpstoxClient
 
 
 class UpstoxDataSource:
     def __init__(self, db):
         self.db = db
+        self.client = UpstoxClient()
 
-    async def __fetch_nse_instruments(self):
+    async def __sync_nse_instruments(self):
         if not self.db:
             raise Exception("Database Instance is not available")
 
@@ -51,7 +52,7 @@ class UpstoxDataSource:
             query = """
                     INSERT INTO symbols 
                     (
-                        ticker, tick_size, name, segment, market, exchange, exchange_token,
+                        query_key, fetch_key, source, tick_size, name, segment, market, exchange, exchange_token,
                         instrument_key, type, lot_size, multiplier, active, updated_at, created_at
                     )
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
@@ -63,7 +64,7 @@ class UpstoxDataSource:
         finally:
             await self.db.release_connection(conn)
 
-    async def __fetch_bse_instruments(self):
+    async def __sync_bse_instruments(self):
         if not self.db:
             raise Exception("Database Instance is not available")
 
@@ -118,23 +119,32 @@ class UpstoxDataSource:
             await self.db.release_connection(conn)
 
     async def fetch_instruments(self):
-        await self.__fetch_nse_instruments()
-        await self.__fetch_bse_instruments()
+        await self.__sync_nse_instruments()
+        await self.__sync_bse_instruments()
 
-    async def fetch_data(
+    async def get_data(
         self,
         ticker: str,
         interval: Literal["1M", "2M", "5M", "15M", "30M", "1H", "4H", "D"],
         end_date: datetime,
         start_date: datetime | None = None,
     ):
+        ticker, exchange = ticker.split(".")
+
         conn = await self.db.get_connection()
-        query = f"SELECT * from symbols WHERE ticker='{ticker}';"
+        query = (
+            f"SELECT * from symbols WHERE ticker='{ticker}' and exchange='{exchange}';"
+        )
+
         result = await conn.fetch(query)
 
         if result is None:
             raise Exception(f"Provided ticker {ticker} does not exist.")
+        else:
+            result = dict(result[0])
 
-        result = result[0]
+        df = self.client.fetch_historical_data(
+            result["instrument_key"], end_date, start_date
+        )
 
-        fetch_historical_data(result["instrument_key"], end_date, start_date)
+        return df

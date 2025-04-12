@@ -28,18 +28,21 @@ class Database:
         try:
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS symbols (
-                    ticker SYMBOL,
+                    query_key STRING,
+                    fetch_key STRING,
+                    source SYMBOL,
                     tick_size DOUBLE,
-                    name SYMBOL,
+                    name STRING,
                     segment SYMBOL,
                     market SYMBOL,
                     exchange SYMBOL,
-                    exchange_token SYMBOL,
-                    instrument_key SYMBOL,
+                    exchange_token STRING,
+                    instrument_key STRING,
                     type SYMBOL,
-                    lot_size LONG,
+                    lot_size FLOAT,
                     multiplier DOUBLE,
                     active BOOLEAN,
+                    priority BOOLEAN,
                     updated_at TIMESTAMP,
                     created_at TIMESTAMP
                 );

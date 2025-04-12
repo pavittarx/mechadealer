@@ -1,8 +1,12 @@
 [project]
 dependencies = [
+  "apache-airflow>=2.10.5",
   "asyncio>=3.4.3",
   "asyncpg>=0.30.0",
+  "dagster>=1.10.10",
+  "dagster-webserver>=1.10.10",
   "eodhd>=1.0.32",
+  "fastapi[standard]>=0.115.12",
   "nox>=2025.2.9",
   "ntplib>=0.4.0",
   "pendulum>=3.0.0",
