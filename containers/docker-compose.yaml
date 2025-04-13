@@ -9,7 +9,11 @@ services:
       - "8812:8812" # PGWire
       - "9003:9003" # Min Health Server
     volumes:
-      - ./questdb_data:/var/lib/questdb
+      - type: bind
+        source: ${PWD}/.questdb
+        target: /var/lib/questdb 
+
+      # - ./questdb_data:/var/lib/questdb
   loki:
     image: grafana/loki:latest
     container_name: loki
