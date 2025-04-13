@@ -19,16 +19,18 @@ class UpstoxDataSource:
 
         try:
             now = datetime.now()
-            query = "SELECT ticker FROM symbols WHERE exchange = 'NSE';"
+            query = "SELECT query_key, fetch_key FROM symbols;"
             results = await conn.fetch(query)
 
-            tickers = [row["ticker"] for row in results]
+            tickers = [row["fetch_key"] for row in results]
             df = df[~df["ticker"].isin(tickers)]
 
             records = df.to_records(index=False)
             values = [
                 (
-                    r.ticker,
+                    r.ticker+'.'+r.exchange,
+                    r.instrument_key,
+                    "upstox",
                     r.tick_size,
                     r.name,
                     r.segment,
@@ -40,6 +42,7 @@ class UpstoxDataSource:
                     r.lot_size or 0,
                     r.multiplier,
                     True if r.active else False,
+                    False,
                     now,
                     now,
                 )
@@ -53,9 +56,9 @@ class UpstoxDataSource:
                     INSERT INTO symbols 
                     (
                         query_key, fetch_key, source, tick_size, name, segment, market, exchange, exchange_token,
-                        instrument_key, type, lot_size, multiplier, active, updated_at, created_at
+                        instrument_key, type, lot_size, multiplier, active, priority, updated_at, created_at
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);
                 """
 
             for row in values:
@@ -68,21 +71,23 @@ class UpstoxDataSource:
         if not self.db:
             raise Exception("Database Instance is not available")
 
-        df = get_bse_instruments()
+        df = get_nse_instruments()
         conn = await self.db.get_connection()
 
         try:
             now = datetime.now()
-            query = "SELECT ticker FROM symbols WHERE exchange = 'NSE';"
+            query = "SELECT query_key, fetch_key FROM symbols;"
             results = await conn.fetch(query)
 
-            tickers = [row["ticker"] for row in results]
+            tickers = [row["fetch_key"] for row in results]
             df = df[~df["ticker"].isin(tickers)]
 
             records = df.to_records(index=False)
             values = [
                 (
-                    r.ticker,
+                    r.ticker+'.'+r.exchange,
+                    r.instrument_key,
+                    "upstox",
                     r.tick_size,
                     r.name,
                     r.segment,
@@ -94,6 +99,7 @@ class UpstoxDataSource:
                     r.lot_size or 0,
                     r.multiplier,
                     True if r.active else False,
+                    False,
                     now,
                     now,
                 )
@@ -106,10 +112,10 @@ class UpstoxDataSource:
             query = """
                     INSERT INTO symbols 
                     (
-                        ticker, tick_size, name, segment, market, exchange, exchange_token,
-                        instrument_key, type, lot_size, multiplier, active, updated_at, created_at
+                        query_key, fetch_key, source, tick_size, name, segment, market, exchange, exchange_token,
+                        instrument_key, type, lot_size, multiplier, active, priority, updated_at, created_at
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17);
                 """
 
             for row in values:
@@ -118,6 +124,7 @@ class UpstoxDataSource:
         finally:
             await self.db.release_connection(conn)
 
+    
     async def fetch_instruments(self):
         await self.__sync_nse_instruments()
         await self.__sync_bse_instruments()

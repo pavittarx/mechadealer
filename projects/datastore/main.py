@@ -1,8 +1,9 @@
 import uvicorn
-from .db import Database
-from .sources.upstox import UpstoxDataSource
+from db import Database
+from sources.upstox import UpstoxDataSource
 from datetime import datetime
 from fastapi import FastAPI
+import asyncio
 
 app = FastAPI()
 
@@ -41,12 +42,16 @@ async def main():
 
 @app.get("/sync")
 async def sync():
+    await Database.init_database()
     upstox = UpstoxDataSource(Database)
     await upstox.fetch_instruments()
+    
     return {"status": "success"}
 
 
 if __name__ == "__main__":
-    config = uvicorn.Config("main:app", port=5000, log_level="info")
-    server = uvicorn.Server(config)
-    server.run()
+    # config = uvicorn.Config("main:app", port=5000, log_level="info")
+    # server = uvicorn.Server(config)
+    # server.run()
+    
+    asyncio.run(sync())

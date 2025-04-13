@@ -5,7 +5,6 @@ from questdb.ingress import Sender
 
 load_dotenv()
 
-
 class Database:
     _pool = None
     _sender = None
