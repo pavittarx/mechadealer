@@ -30,18 +30,18 @@ class Database:
                     query_key STRING,
                     fetch_key STRING,
                     source SYMBOL,
+                    ticker STRING,
                     tick_size DOUBLE,
                     name STRING,
                     segment SYMBOL,
                     market SYMBOL,
                     exchange SYMBOL,
                     exchange_token STRING,
-                    instrument_key STRING,
                     type SYMBOL,
                     lot_size FLOAT,
                     multiplier DOUBLE,
-                    active BOOLEAN,
                     priority BOOLEAN,
+                    active BOOLEAN,
                     updated_at TIMESTAMP,
                     created_at TIMESTAMP
                 );
@@ -56,7 +56,8 @@ class Database:
                     high DOUBLE,
                     low DOUBLE,
                     close DOUBLE,
-                    volume LONG
+                    volume LONG,
+                    oi DOUBLE,
                 ) 
                 timestamp(ts) 
                 PARTITION BY DAY WAL

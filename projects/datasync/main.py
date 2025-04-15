@@ -1,27 +1,20 @@
 
+from json import load
+from os import sync
 from prefect import flow, task
-from dotenv import load_dotenv
 from datetime import datetime
+from dotenv import load_dotenv
 
 from questdb.ingress import Sender
 from sources.upstox import UpstoxClient
 
 import pandas as pd
-import psycopg as pg
-import os
+
+from db import Database
 
 load_dotenv()
-
-qdb_conn_str = os.getenv("QDB_CONNECTION_STRING")
-qdb_conf = os.getenv("QDB_CLIENT_CONF")
-
-if qdb_conn_str is None:
-    raise ValueError("QDB_CONNECTION_STRING not set in environment variables")
-
-if qdb_conf is None:
-    raise ValueError("QUEST_CLIENT_CONF not set in environment variables")
-
-conn = pg.connect(qdb_conn_str, autocommit=True)
+db = Database()
+client = UpstoxClient()
 
 @task
 def get_priority_tickers_list():
@@ -30,16 +23,17 @@ def get_priority_tickers_list():
                 FROM symbols
                 WHERE priority = TRUE;
             """
-        
-    cursor = conn.cursor()
-    cursor.execute(query)
-    tickers = cursor.fetchall() 
+            
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        tickers = cursor.fetchall() 
     
-    tickers  = [{'query_key': tick[0], 
+        tickers  = [{'query_key': tick[0], 
                  'fetch_key': tick[1]
                  } for tick in tickers ]
     
-    return tickers
+        return tickers
 
 @task
 def get_non_priority_tickers_list():
@@ -48,16 +42,18 @@ def get_non_priority_tickers_list():
                 FROM symbols
                 WHERE priority = FALSE;
             """
+       
+    with db.get_connection() as conn: 
         
-    cursor = conn.cursor()
-    cursor.execute(query)
-    tickers = cursor.fetchall() 
+        cursor = conn.cursor()
+        cursor.execute(query)
+        tickers = cursor.fetchall() 
     
-    tickers  = [{'query_key': tick[0], 
-                 'fetch_key': tick[1]
-                 } for tick in tickers ]
+        tickers  = [{'query_key': tick[0], 
+                    'fetch_key': tick[1]
+                    } for tick in tickers ]
     
-    return tickers
+        return tickers
 
 @task 
 def latest_data_timestamp(ticker):
@@ -67,21 +63,20 @@ def latest_data_timestamp(ticker):
                 WHERE ticker = %s 
                 ORDER BY ts DESC;
             """
-        
-    cursor = conn.cursor()
-    cursor.execute(query, (ticker["query_key"],))
+            
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, (ticker["query_key"],))
     
-    data = cursor.fetchone()
+        data = cursor.fetchone()
     
-    if data is None:
-        return None
-    else:
-        return data[0]
+        if data is None:
+            return None
+        else:
+            return data[0]
 
 @task
 def fetch_data_historic(ticker: dict, latest_ts: datetime | None =None):
-    client = UpstoxClient()
-    
     if latest_ts is None:
         candles = client.fetch_historical_data(
             ticker["fetch_key"],
@@ -100,8 +95,6 @@ def fetch_data_historic(ticker: dict, latest_ts: datetime | None =None):
     
 @task
 def fetch_data_intraday(ticker: dict):
-    client = UpstoxClient()
-    
     candles = client.fetch_intraday_data(
             ticker["fetch_key"],
         )
@@ -146,7 +139,73 @@ def fetch_and_save(tick: dict):
     # Fetch Intraday data
     data = fetch_data_intraday(tick)
     save_data(tick, data) 
-
+    
+@task
+def sync_instruments():
+    nse = client.fetch_nse_instruments()
+    bse = client.fetch_bse_instruments()
+    
+    df = pd.concat([nse, bse], ignore_index=True)
+    now = datetime.now().isoformat()
+    df['updated_at'] = now
+    df['created_at'] = now
+    
+    existing_keys = set()
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT query_key FROM symbols")
+            existing_keys = {row[0] for row in cursor.fetchall()}
+        except Exception as e:
+            print(f"Error fetching existing keys: {e}")
+            
+        # Filter out existing records
+    df = df[~df['query_key'].isin(existing_keys)]
+    
+    if df.empty:
+        print("No new instruments to add")
+        return 0
+    
+    # Insert new records in batches
+    batch_size = 1000
+    inserted_count = 0
+    
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Prepare the insert query with placeholders
+        query = """
+            INSERT INTO symbols (
+                query_key, fetch_key, source, ticker, tick_size,
+                name, segment, market, exchange, exchange_token,
+                lot_size, multiplier, priority, active,
+                updated_at, created_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s
+            )
+        """
+        
+        values = [tuple(row) for row in df[[
+            "query_key", "fetch_key", "source", "ticker", "tick_size",
+            "name", "segment", "market", "exchange", "exchange_token",
+            "lot_size", "multiplier", "priority", "active",
+            "updated_at", "created_at"
+        ]].to_records(index=False)]
+        
+        # Insert in batches
+        for i in range(0, len(values), batch_size):
+            batch = values[i:i+batch_size]
+            try:
+                cursor.executemany(query, batch)
+                inserted_count += len(batch)
+                print(f"Inserted batch {i//batch_size + 1}/{(len(values) + batch_size - 1)//batch_size}")
+            except Exception as e:
+                print(f"Error inserting batch: {e}")
+        
+    print(f"Successfully added {inserted_count} new instruments")
+    return inserted_count
+    
 @flow
 def fetch_priority_tickers():
     tickers = get_priority_tickers_list()
@@ -158,3 +217,7 @@ def fetch_non_priority_tickers():
     tickers = get_non_priority_tickers_list()
     for tick in tickers:
         fetch_and_save(tick)
+        
+if __name__ == "__main__":
+    # Fetch and save data for priority tickers
+    sync_instruments()
