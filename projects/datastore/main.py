@@ -40,7 +40,6 @@ async def main():
     return True
 
 
-@app.get("/sync")
 async def sync():
     await Database.init_database()
     upstox = UpstoxDataSource(Database)
@@ -54,4 +53,6 @@ if __name__ == "__main__":
     # server = uvicorn.Server(config)
     # server.run()
     
+    print("Starting sync...")
     asyncio.run(sync())
+    print("Sync completed.")

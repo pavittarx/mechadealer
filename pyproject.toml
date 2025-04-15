@@ -1,6 +1,5 @@
 [project]
 dependencies = [
-  "apache-airflow>=2.10.5",
   "asyncio>=3.4.3",
   "asyncpg>=0.30.0",
   "dagster>=1.10.10",
@@ -24,7 +23,7 @@ requires-python = ">=3.12"
 version = "0.1.0"
 
 [tool.uv.workspace]
-members = ["projects/*"]
+members = ["projects/*", "datasync"]
 
 [dependency-groups]
 dev = [
