@@ -1,8 +1,7 @@
 
-from httpx import get
 from prefect import flow, task
 from dotenv import load_dotenv
-from datetime import date, datetime
+from datetime import datetime
 
 from questdb.ingress import Sender
 from sources.upstox import UpstoxClient
@@ -37,31 +36,53 @@ def get_priority_tickers_list():
     tickers = cursor.fetchall() 
     
     tickers  = [{'query_key': tick[0], 
-                 'fetch_key': tick[1],
-                 'priority': False
+                 'fetch_key': tick[1]
                  } for tick in tickers ]
     
     return tickers
 
 @task
-def fetch_data(ticker):
-    client = UpstoxClient()
-    
+def get_non_priority_tickers_list():
     query = """
-        SELECT * 
-        FROM market_data
-        LATEST ON ts
-        PARTITION BY ts;
-    """
-    
+                SELECT DISTINCT query_key, fetch_key, priority,
+                FROM symbols
+                WHERE priority = FALSE;
+            """
+        
     cursor = conn.cursor()
     cursor.execute(query)
+    tickers = cursor.fetchall() 
+    
+    tickers  = [{'query_key': tick[0], 
+                 'fetch_key': tick[1]
+                 } for tick in tickers ]
+    
+    return tickers
+
+@task 
+def latest_data_timestamp(ticker):
+    query = """
+                SELECT ts, ticker 
+                FROM market_data  1
+                WHERE ticker = %s 
+                ORDER BY ts DESC;
+            """
+        
+    cursor = conn.cursor()
+    cursor.execute(query, (ticker["query_key"],))
     
     data = cursor.fetchone()
     
-    candles = None
-    
     if data is None:
+        return None
+    else:
+        return data[0]
+
+@task
+def fetch_data_historic(ticker: dict, latest_ts: datetime | None =None):
+    client = UpstoxClient()
+    
+    if latest_ts is None:
         candles = client.fetch_historical_data(
             ticker["fetch_key"],
             datetime.now(),
@@ -71,11 +92,21 @@ def fetch_data(ticker):
         candles = client.fetch_historical_data(
             ticker["fetch_key"],
             datetime.now(),
-            # datetime(data[0]),
+            latest_ts
         )
         
     return candles
     
+    
+@task
+def fetch_data_intraday(ticker: dict):
+    client = UpstoxClient()
+    
+    candles = client.fetch_intraday_data(
+            ticker["fetch_key"],
+        )
+        
+    return candles
 
 @task
 def save_data(ticker, data):
@@ -95,30 +126,35 @@ def save_data(ticker, data):
         
     print('Data Ingested for Ticker', ticker['query_key'])
     
-
-@task
-def get_all_tickers():
-    return []
+@task 
+def fetch_and_save(tick: dict): 
+    latest_ts: datetime | None = latest_data_timestamp(tick)
+        
+    # Fetch historic data if no data or data is old 
+    if latest_ts is None:
+        data = fetch_data_historic(tick)
+        save_data(tick, data)
+            
+    else:      
+        today = datetime.now().date()
+        latest_date = latest_ts.date()
+        
+        if latest_date < today:
+            data = fetch_data_historic(tick, latest_ts)
+            save_data(tick, data)
+            
+    # Fetch Intraday data
+    data = fetch_data_intraday(tick)
+    save_data(tick, data) 
 
 @flow
 def fetch_priority_tickers():
     tickers = get_priority_tickers_list()
     for tick in tickers:
-        data = fetch_data(tick)
-        save_data(tick, data)
-
-@flow
-def fetch_all_tickers():
-    tickers = get_all_tickers()
-    for tick in tickers:
-        data = fetch_data(tick)
-        save_data(tick, data)
+        fetch_and_save(tick)
         
-        
-if __name__ == "__main__":
-    tickers = get_priority_tickers_list()
+@flow 
+def fetch_non_priority_tickers():
+    tickers = get_non_priority_tickers_list()
     for tick in tickers:
-        data = fetch_data(tick)
-        save_data(tick, data)
-    # fetch_priority_tickers()
-    # fetch_all_tickers()
+        fetch_and_save(tick)
