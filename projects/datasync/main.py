@@ -1,10 +1,12 @@
 from json import load
 from os import sync
-from prefect import flow, task
 from datetime import datetime
 from dotenv import load_dotenv
 
 from questdb.ingress import Sender
+from prefect import flow, task
+from prefect.schedules import RRule
+
 from sources.upstox import UpstoxClient
 
 import pandas as pd
@@ -30,7 +32,6 @@ def get_priority_tickers_list():
         tickers = cursor.fetchall()
 
         tickers = [{"query_key": tick[0], "fetch_key": tick[1]} for tick in tickers]
-
         return tickers
 
 
@@ -244,4 +245,13 @@ def fetch_non_priority_tickers():
 if __name__ == "__main__":
     # Fetch and save data for priority tickers
     # sync_instruments()
-    fetch_priority_tickers()
+    fetch_priority_tickers.serve(
+        name="fetch-priority-tickers",
+        schedules=[
+            RRule(
+                "FREQ=MINUTELY;INTERVAL=1;BYHOUR=9,10,11,12,13,14,15,16;BYMINUTE=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;WKST=MO",
+                timezone="Asia/Kolkata",
+                slug="priority-tickers-schedule",
+            )
+        ],
+    )

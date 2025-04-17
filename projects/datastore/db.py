@@ -4,11 +4,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Database:
     _pool = None
     _sender = None
     _init = False
-        
+
     @classmethod
     async def get_pool(cls):
         if cls._pool is None:
