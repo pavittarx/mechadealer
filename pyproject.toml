@@ -1,5 +1,6 @@
 [project]
 dependencies = [
+  "confluent-kafka>=2.10.0",
   "nox>=2025.2.9",
   "ntplib>=0.4.0",
   "pendulum>=3.0.0",
