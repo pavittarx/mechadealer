@@ -1,12 +1,26 @@
+import pandas as pd
 from typing import Literal
 from db import Database
+
+freq_map = {
+    "1M": "1T",  # 1 minute
+    "2M": "2T",  # 2 minutes
+    "5M": "5T",  # 5 minutes
+    "10M": "10T",  # 10 minutes
+    "15M": "15T",  # 15 minutes
+    "30M": "30T",  # 30 minutes
+    "1H": "1H",  # 1 hour
+    "2H": "2H",  # 2 hours
+    "4H": "4H",  # 4 hours
+    "1D": "1D",  # 1 day
+}
 
 
 class DataStore:
     def get_ticker(self, ticker: str):
         with Database.get_connection() as conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT * FROM tickers WHERE ticker = %s", (ticker,))
+                cursor.execute("SELECT * FROM symbols WHERE query_key = %s", (ticker,))
                 data = cursor.fetchone()
 
                 if data is None:
@@ -21,4 +35,65 @@ class DataStore:
         start_date: str | None = None,
         end_date: str | None = None,
     ):
-        pass
+        query_chunks = ["SELECT * FROM market_data WHERE ticker = %s"]
+        params = [ticker]
+
+        if start_date:
+            query_chunks.append("AND ts >= %s")
+            params.append(start_date)
+
+        if end_date:
+            query_chunks.append("AND ts <= %s")
+            params.append(end_date)
+
+        query_chunks.append("ORDER BY ts;")
+        query = " ".join(query_chunks)
+        print(query, params)
+
+        with Database.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query, params)  # type: ignore
+                data = cursor.fetchall()
+
+                if data is None:
+                    raise ValueError(f"No data found for ticker {ticker}")
+
+                df = pd.DataFrame(
+                    data,
+                    columns=[
+                        "ticker",
+                        "ts",
+                        "open",
+                        "high",
+                        "low",
+                        "close",
+                        "volume",
+                        "oi",
+                    ],
+                )
+
+                df.set_index("ts", inplace=True)
+
+                if freq != "1M":
+                    if freq not in freq_map.keys():
+                        raise ValueError(f"Invalid frequency: {freq}")
+
+                    df = df.resample(freq_map[freq]).agg(
+                        {
+                            "open": "first",
+                            "high": "max",
+                            "low": "min",
+                            "close": "last",
+                            "volume": "sum",
+                            "oi": "last",
+                        }
+                    )
+                    df.dropna(inplace=True)
+
+                return df
+
+
+if __name__ == "__main__":
+    ds = DataStore()
+    print(ds.get_ticker("TATASTEEL.NSE"))
+    print(ds.get_historic_data("TATASTEEL.NSE", "1M"))
