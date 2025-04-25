@@ -1,6 +1,7 @@
 [project]
 dependencies = [
   "confluent-kafka>=2.10.0",
+  "datastore",
   "nox>=2025.2.9",
   "ntplib>=0.4.0",
   "pendulum>=3.0.0",
@@ -13,15 +14,14 @@ requires-python = ">=3.12"
 version = "0.1.0"
 
 [tool.uv.workspace]
-members = ["projects/*", "datasync"]
+members = ["projects/*", "libs/datastore"]
+
+[tool.uv.sources]
+datastore = { workspace = true }
 
 [dependency-groups]
-dev = [
-  "pyright>=1.1.398",
-  "ruff>=0.11.2",
-  "typing>=3.10.0.0",
-]
+dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]
 
-[tools.pyright]
+[tool.pyright]
 reportMissingTypeArgument = true
 strictListInference = true

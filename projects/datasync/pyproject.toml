@@ -2,6 +2,7 @@
 dependencies = [
   "asyncio>=3.4.3",
   "asyncpg>=0.30.0",
+  "datastore",
   "pandas>=2.2.3",
   "prefect>=3.3.4",
   "psycopg>=3.2.6",
@@ -16,3 +17,6 @@ name = "datasync"
 readme = "README.md"
 requires-python = ">=3.12"
 version = "0.1.0"
+
+[tool.uv.sources]
+datastore = { workspace = true }

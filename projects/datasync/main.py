@@ -1,17 +1,12 @@
-from json import load
-from os import sync
+import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
-
 from questdb.ingress import Sender
 from prefect import flow, task
 from prefect.schedules import RRule
 
 from sources.upstox import UpstoxClient
-
-import pandas as pd
-
-from db import Database
+from datastore import Database
 
 load_dotenv()
 db = Database()

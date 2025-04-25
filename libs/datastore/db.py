@@ -1,23 +1,15 @@
-from questdb.ingress import Sender
 from contextlib import contextmanager
-import psycopg
 import psycopg_pool
 import os
 
-
 qdb_conn_str = os.getenv("QDB_CONNECTION_STRING")
-qdb_conf = os.getenv("QDB_CLIENT_CONF")
 
 if qdb_conn_str is None:
     raise ValueError("QDB_CONNECTION_STRING not set in environment variables")
 
-if qdb_conf is None:
-    raise ValueError("QUEST_CLIENT_CONF not set in environment variables")
-
 
 class Database:
     _pool = None
-    _sender = None
 
     @classmethod
     def __init__(cls):
@@ -98,11 +90,6 @@ class Database:
             yield conn
         finally:
             pool.putconn(conn)
-
-    @classmethod
-    @contextmanager
-    def get_sender(cls):
-        return Sender.from_env()
 
     @classmethod
     def release_connection(cls, conn):
