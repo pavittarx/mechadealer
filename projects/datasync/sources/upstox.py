@@ -8,6 +8,7 @@ import json
 
 load_dotenv()
 
+
 def transform_instruments(data, exchange: str):
     df = pd.DataFrame(data)
     df = df.rename(
@@ -23,7 +24,7 @@ def transform_instruments(data, exchange: str):
     df["exchange"] = exchange
     df["market"] = "IN"
     df["source"] = "upstox"
-    
+
     df["query_key"] = df["ticker"] + "." + df["exchange"]
     df["fetch_key"] = df["instrument_key"]
     df["segment"] = df["segment"].str.extract(r"_(.+)").fillna(df["segment"])
@@ -47,7 +48,7 @@ def transform_instruments(data, exchange: str):
             "active",
         ]
     ]
-    
+
     default_values = {
         "multiplier": 0,
         "lot_size": 0,
@@ -61,10 +62,11 @@ def transform_instruments(data, exchange: str):
 
     return df
 
+
 class UpstoxClient:
     def __init__(self):
         self.BASE_URL = "https://api-v2.upstox.com"
-        
+
     def fetch_nse_instruments(self):
         url = "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz"
         response = requests.get(url)
@@ -72,13 +74,13 @@ class UpstoxClient:
         data = json.loads(json_str)
         df = transform_instruments(data, "NSE")
         return df
-    
+
     def fetch_bse_instruments(self):
         url = "https://assets.upstox.com/market-quote/instruments/exchange/BSE.json.gz"
         response = requests.get(url)
         json_str = gzip.decompress(response.content)
         data = json.loads(json_str)
-        df = transform_instruments(data,  "BSE")
+        df = transform_instruments(data, "BSE")
         return df
 
     def fetch_historical_data(

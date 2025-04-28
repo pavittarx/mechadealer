@@ -7,6 +7,7 @@ from prefect.schedules import RRule
 
 from sources.upstox import UpstoxClient
 from datastore import Database
+from kafkalib import Kafka, DataFeedTopics
 
 load_dotenv()
 db = Database()
@@ -70,7 +71,7 @@ def latest_data_timestamp(ticker):
 
 
 @task
-def fetch_data_historic(ticker: dict, latest_ts: datetime | None = None):
+def fetch_data_historic(ticker: dict[str, str], latest_ts: datetime | None = None):
     if latest_ts is None:
         candles = client.fetch_historical_data(
             ticker["fetch_key"],
@@ -86,7 +87,7 @@ def fetch_data_historic(ticker: dict, latest_ts: datetime | None = None):
 
 
 @task
-def fetch_data_intraday(ticker: dict):
+def fetch_data_intraday(ticker: dict[str, str]):
     candles = client.fetch_intraday_data(
         ticker["fetch_key"],
     )
@@ -96,8 +97,6 @@ def fetch_data_intraday(ticker: dict):
 
 @task
 def save_data(ticker, data):
-    print("Saving Data", ticker, data)
-
     df = pd.DataFrame(
         data, columns=["ts", "open", "high", "low", "close", "volume", "oi"]
     )
@@ -116,13 +115,14 @@ def save_data(ticker, data):
 
 
 @task
-def fetch_and_save(tick: dict):
+def fetch_data(tick: dict[str, str]):
     latest_ts: datetime | None = latest_data_timestamp(tick)
+
+    data = None
 
     # Fetch historic data if no data or data is old
     if latest_ts is None:
         data = fetch_data_historic(tick)
-        save_data(tick, data)
 
     else:
         today = datetime.now().date()
@@ -130,11 +130,15 @@ def fetch_and_save(tick: dict):
 
         if latest_date < today:
             data = fetch_data_historic(tick, latest_ts)
-            save_data(tick, data)
 
     # Fetch Intraday data
-    data = fetch_data_intraday(tick)
-    save_data(tick, data)
+    if data is None:
+        data = fetch_data_intraday(tick)
+        return data
+    else:
+        current_data = fetch_data_intraday(tick)
+        data = pd.concat([data, current_data], ignore_index=True)
+        return data
 
 
 @task
@@ -223,23 +227,58 @@ def sync_instruments():
     return inserted_count
 
 
+@task
+def trigger_kafka_events(tick: dict[str, str], data):
+    k = Kafka()
+    app = k.get_app()
+
+    feed_1M = app.topic(name=DataFeedTopics.FEED_1M.value, value_serializer="json")
+    row = data.iloc[0]
+
+    message = {
+        "ticker": tick["query_key"],
+        "ts": row["ts"],
+        "open": float(row["open"]),
+        "high": float(row["high"]),
+        "low": float(row["low"]),
+        "close": float(row["close"]),
+        "volume": int(row["volume"]),
+        "oi": float(row["oi"]),
+    }
+
+    with app.get_producer() as producer:
+        kafka_msg = feed_1M.serialize(key=message["ticker"], value=message)
+
+        producer.produce(
+            topic=feed_1M.name,
+            key=kafka_msg.key,
+            value=kafka_msg.value,
+        )
+
+        # TODO: Time based Construct send data at specified intervals
+
+
 @flow
 def fetch_priority_tickers():
     tickers = get_priority_tickers_list()
     for tick in tickers:
-        fetch_and_save(tick)
+        data = fetch_data(tick)
+        trigger_kafka_events(tick, data)
+        save_data(tick, data)
 
 
 @flow
 def fetch_non_priority_tickers():
     tickers = get_non_priority_tickers_list()
     for tick in tickers:
-        fetch_and_save(tick)
+        data = fetch_data(tick)
+        save_data(tick, data)
 
 
 if __name__ == "__main__":
     # Fetch and save data for priority tickers
     # sync_instruments()
+
     fetch_priority_tickers.serve(
         name="fetch-priority-tickers",
         schedules=[
@@ -250,3 +289,5 @@ if __name__ == "__main__":
             )
         ],
     )
+
+    # fetch_priority_tickers()
