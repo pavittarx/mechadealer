@@ -92,8 +92,50 @@ class DataStore:
 
                 return df
 
+    def add_to_priority(self, ticker: str):
+        if ticker is None:
+            raise ValueError("Ticker cannot be None")
+
+        result = self.get_ticker(ticker)
+
+        if result is None:
+            raise ValueError(f"Ticker {ticker} is not available")
+
+        with Database.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE symbols SET priority = TRUE WHERE query_key = %s", (ticker,)
+                )
+
+                if cursor.rowcount == 0:
+                    raise ValueError(f"Failed to update priority for ticker {ticker}")
+
+                conn.commit()
+
+    def remove_from_priority(self, ticker: str):
+        if ticker is None:
+            raise ValueError("Please provide the ticker")
+
+        result = self.get_ticker(ticker)
+
+        if result is None:
+            raise ValueError(f"Ticker {ticker} is not available")
+
+        with Database.get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE symbols SET priority = FALSE WHERE query_key = %s",
+                    (ticker,),
+                )
+
+                if cursor.rowcount == 0:
+                    raise ValueError(f"Failed to update priority for ticker {ticker}")
+
+                conn.commit()
+
 
 if __name__ == "__main__":
     ds = DataStore()
-    print(ds.get_ticker("TATASTEEL.NSE"))
-    print(ds.get_historic_data("TATASTEEL.NSE", "1M"))
+    # print(ds.get_ticker("TATASTEEL.NSE"))
+    # print(ds.get_historic_data("TATASTEEL.NSE", "1M"))
+    print(ds.add_to_priority("TATASTEEL.NSE"))
