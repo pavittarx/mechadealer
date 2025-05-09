@@ -1,13 +1,13 @@
 [project]
 name = "kafkalib"
-version = "0.1.2"
+version = "0.2.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
     { name = "pavittarx", email = "29155477+pavittarx@users.noreply.github.com" },
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["pydantic>=2.10.6", "quixstreams>=3.13.1"]
 
 [build-system]
 requires = ["hatchling"]

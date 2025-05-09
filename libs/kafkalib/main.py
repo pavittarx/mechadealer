@@ -1,68 +1,27 @@
-from enum import Enum
-from quixstreams import Application
-from quixstreams.kafka.consumer import BaseConsumer as Consumer
-from quixstreams.kafka.producer import Producer
-
-from events import DataFeedTopics
 from typing import Literal
-import os
-
-
-broker_address = os.getenv("KAFKA_BROKER_ADDRESS")
-
-if not broker_address:
-    raise Exception(
-        "[kafka]: broker address must be available on KAFKA_BROKER_ADDRESS env variable"
-    )
-
-app = Application(
-    broker_address=broker_address,
-)
-
-
-class Topics(Enum):
-    FEED_RAW = app.topic(name=DataFeedTopics.FEED_RAW.value, value_deserializer="json")
-    FEED_1M = app.topic(name=DataFeedTopics.FEED_1M.value, value_deserializer="json")
-    FEED_2M = app.topic(name=DataFeedTopics.FEED_2M.value, value_deserializer="json")
-    FEED_5M = app.topic(name=DataFeedTopics.FEED_5M.value, value_deserializer="json")
-    FEED_10M = app.topic(name=DataFeedTopics.FEED_10M.value, value_deserializer="json")
-    FEED_15M = app.topic(name=DataFeedTopics.FEED_15M.value, value_deserializer="json")
-    FEED_30M = app.topic(name=DataFeedTopics.FEED_30M.value, value_deserializer="json")
-    FEED_1H = app.topic(name=DataFeedTopics.FEED_1H.value, value_deserializer="json")
-
-    SIGNALS = app.topic(name="signals", value_deserializer="json")
-    ORDERS = app.topic(name="orders", value_deserializer="json")
+from setup import app
+from topics import Topics
 
 
 class Kafka:
     def __init__(self):
-        self.app = Application(
-            broker_address=broker_address,
-        )
+        self.app = app
 
     def get_app(self):
         return self.app
 
-    def get_producer(self):
-        if not broker_address:
-            raise Exception(
-                "[kafka]: broker address must be available on KAFKA_BROKER_ADDRESS env variable"
-            )
-
-        return Producer(broker_address=broker_address)
-
-    def get_consumer(
-        self,
-        consumer_group: str,
-        auto_offset_reset: Literal["earliest", "latest", "error"] = "earliest",
+    def get_feed_topic(
+        self, tf: Literal["1M", "2M", "5M", "10M", "15M", "30M", "1H", "4H"]
     ):
-        if not broker_address:
-            raise Exception(
-                "[kafka]: broker address must be available on KAFKA_BROKER_ADDRESS env variable"
-            )
+        topics_match = {
+            "1M": Topics.FEED_1M.value,
+            "2M": Topics.FEED_2M.value,
+            "5M": Topics.FEED_5M.value,
+            "10M": Topics.FEED_10M.value,
+            "15M": Topics.FEED_15M.value,
+            "30M": Topics.FEED_30M.value,
+            "1H": Topics.FEED_1H.value,
+            "4H": Topics.FEED_4H.value,
+        }
 
-        return Consumer(
-            broker_address=broker_address,
-            consumer_group=consumer_group,
-            auto_offset_reset=auto_offset_reset,
-        )
+        return topics_match[tf]

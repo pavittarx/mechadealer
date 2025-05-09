@@ -1,10 +1,15 @@
-from .events import DataFeedTopics, OrderTopics, SignalTopics
-from .main import Kafka, Topics
+from .topics import Topics
+from .main import Kafka
+from .models import SignalAction, SignalType, OrderType, FillType
+from .models import DataEvent, SignalEvent
 
 __all__ = [
-    "DataFeedTopics",
-    "OrderTopics",
-    "SignalTopics",
     "Kafka",
     "Topics",
+    "DataEvent",
+    "SignalEvent",
+    "SignalAction",
+    "SignalType",
+    "OrderType",
+    "FillType",
 ]
