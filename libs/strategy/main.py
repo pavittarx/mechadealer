@@ -4,9 +4,9 @@ from pandas import DataFrame
 from typing import Dict, Literal, Callable
 
 from datastore import DataStore
-from kafkalib import Kafka, Timeframe
+from kafkalib import Kafka, Timeframe, Signal
 
-StrategyFn = Callable[[DataFrame], Dict[str, str | int | float]]
+StrategyFn = Callable[[DataFrame], Signal | list[Signal]]
 
 ds = DataStore()
 kafka = Kafka()
@@ -94,25 +94,6 @@ class StrategyBuilder:
         if self.run_tf not in ["1M", "2M", "5M", "10M", "15M", "30M", "1H", "4H", "1D"]:
             raise ValueError("Invalid time frame")
 
-    def _validate_signal(self, signal):
-        keys = ["action", "type", "order_type"]
-
-        if signal.keys() in keys:
-            raise Exception("[Error]: Signal is not valid.")
-
-        if signal["action"] not in ["buy", "sell"]:
-            raise Exception("[Error]: Action is not valid. Allowed values: buy / sell ")
-
-        if signal["type"] not in ["entry", "exit"]:
-            raise Exception(
-                "[Error]: Type is not valid. Allowed values: limit / market"
-            )
-
-        if signal["order_type"] not in ["market", "limit", "stop"]:
-            raise Exception(
-                "[Error]: Signal Type is unknown. Allowed values: market / limit / stop"
-            )
-
     def run(self):
         ds.add_to_priority(self.ticker)
         datafeed_topic = kafka.get_feed_topic(self.run_tf)
@@ -146,17 +127,14 @@ if __name__ == "__main__":
     def strategyFn(data: pd.DataFrame):
         print("[S]: Strategy Runs")
 
-        return {
-            "action": "buy",
-            "type": "entry",
-            "order_type": "market",
-            "quantity": 1,
-        }
-
-        return {
-            "action": "sell",
-            "type": "exit",
-        }
+        return [
+            Signal(
+                quantity=1,
+                action="buy",
+                type="entry",
+                order_type="market",
+            )
+        ]
 
     builder = StrategyBuilder(
         name="test",

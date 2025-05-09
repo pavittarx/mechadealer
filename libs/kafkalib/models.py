@@ -17,19 +17,17 @@ class DataEvent(BaseModel):
     oi: float
 
 
-class SignalEvent(BaseModel):
-    strategy: str
-    ticker: str
+class Signal(BaseModel):
     quantity: float
     action: SignalAction
     type: SignalType
     order_type: OrderType
-    fill_type: Optional[FillType]
+    fill_type: Optional[FillType] = None
     # Used to identify the position to exit
-    position: Optional[str]
-    price: Optional[float]
-    sl: Optional[float]
-    tp: Optional[float]
+    position: Optional[str] = None
+    limit_price: Optional[float] = None
+    sl: Optional[float] = None
+    tp: Optional[float] = None
 
     @field_validator("type")
     def exit_signal_should_include_position(cls, v: SignalType, info):
@@ -40,7 +38,12 @@ class SignalEvent(BaseModel):
 
     @field_validator("order_type")
     def limit_order_type_should_include_price(cls, v: OrderType, info):
-        if v == "limit" and info.data.get("price") is None:
+        if v == "limit" and info.data.get("limit_price") is None:
             raise ValueError("Price is required for limit orders")
 
         return v
+
+
+class SignalEvent(Signal):
+    strategy: str
+    ticker: str
