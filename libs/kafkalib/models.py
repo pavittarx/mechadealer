@@ -1,13 +1,9 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 from pydantic import BaseModel
 from pydantic import field_validator
 
-
-SignalAction = Literal["buy", "sell"]
-SignalType = Literal["entry", "exit"]
-OrderType = Literal["market", "limit"]
-FillType = Literal["all", "available"]
+from .typelist import SignalAction, SignalType, OrderType, FillType
 
 
 class DataEvent(BaseModel):

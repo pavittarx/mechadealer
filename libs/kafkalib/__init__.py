@@ -1,6 +1,6 @@
 from .topics import Topics
 from .main import Kafka
-from .models import SignalAction, SignalType, OrderType, FillType
+from .typelist import Timeframe, SignalAction, SignalType, OrderType, FillType
 from .models import DataEvent, SignalEvent
 
 __all__ = [
@@ -8,6 +8,7 @@ __all__ = [
     "Topics",
     "DataEvent",
     "SignalEvent",
+    "Timeframe",
     "SignalAction",
     "SignalType",
     "OrderType",
