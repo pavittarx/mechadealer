@@ -4,3 +4,4 @@ containers/questdb_data/*
 .ruff_cache
 .venv
 snippets
+.questdb

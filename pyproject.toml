@@ -1,17 +1,12 @@
 [project]
 dependencies = [
-  "asyncio>=3.4.3",
-  "asyncpg>=0.30.0",
-  "eodhd>=1.0.32",
+  "datastore",
+  "kafka",
+  "kafkalib",
   "nox>=2025.2.9",
   "ntplib>=0.4.0",
   "pendulum>=3.0.0",
-  "pyright>=1.1.398",
-  "pytest>=8.3.5",
   "python-dotenv>=1.1.0",
-  "questdb[dataframe]>=2.0.3",
-  "requests>=2.32.3",
-  "uvicorn>=0.34.0",
 ]
 description = "Add your description here"
 name = "mechadealer"
@@ -20,15 +15,15 @@ requires-python = ">=3.12"
 version = "0.1.0"
 
 [tool.uv.workspace]
-members = ["projects/*"]
+members = ["projects/*", "libs/datastore", "libs/strategy"]
+
+[tool.uv.sources]
+datastore = { workspace = true }
+kafkalib = { path = "libs/kafkalib", editable = true }
 
 [dependency-groups]
-dev = [
-    "pyright>=1.1.398",
- "ruff>=0.11.2",
- "typing>=3.10.0.0",
-]
+dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]
 
-[tools.pyright]
+[tool.pyright]
 reportMissingTypeArgument = true
 strictListInference = true

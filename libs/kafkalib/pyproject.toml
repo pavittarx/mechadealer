@@ -1,0 +1,21 @@
+[project]
+name = "kafkalib"
+version = "0.2.8"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "pavittarx", email = "29155477+pavittarx@users.noreply.github.com" },
+]
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.10.6", "quixstreams>=3.13.1"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+sources = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["__init__.py"]
+force-include = { "." = "kafkalib" }

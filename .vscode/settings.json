@@ -1,6 +1,14 @@
 {
     "python.defaultInterpreterPath": ".venv/bin/python",
-    "python.analysis.typeCheckingMode": "basic",
     "python.analysis.autoImportCompletions": true,
-    "python.analysis.indexing": true
+    "python.analysis.indexing": true,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.venv": true
+    }
 }
