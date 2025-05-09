@@ -1,0 +1,10 @@
+[project]
+name = "strategy"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["datastore", "kafkalib>=0.1.2"]
+
+[tool.uv.sources]
+datastore = { workspace = true }
