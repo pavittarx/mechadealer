@@ -30,7 +30,7 @@ class DataBuilder:
             }
 
             df = pd.DataFrame(columns=columns_with_types)
-            df = df.set_index("ts", inplace=True)
+            df = df.set_index("ts")
 
             self.data[tick] = df
 
