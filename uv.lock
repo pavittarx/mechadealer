@@ -936,6 +936,7 @@ dependencies = [
     { name = "nox" },
     { name = "ntplib" },
     { name = "pendulum" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
 ]
 
@@ -954,6 +955,7 @@ requires-dist = [
     { name = "nox", specifier = ">=2025.2.9" },
     { name = "ntplib", specifier = ">=0.4.0" },
     { name = "pendulum", specifier = ">=3.0.0" },
+    { name = "pydantic", specifier = ">=2.10.6" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
 ]
 

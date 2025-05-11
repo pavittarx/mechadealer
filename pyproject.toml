@@ -6,6 +6,7 @@ dependencies = [
   "nox>=2025.2.9",
   "ntplib>=0.4.0",
   "pendulum>=3.0.0",
+  "pydantic>=2.10.6",
   "python-dotenv>=1.1.0",
 ]
 description = "Add your description here"
