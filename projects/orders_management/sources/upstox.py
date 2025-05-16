@@ -108,6 +108,57 @@ class UpstoxBroker:
             print("Error sending order:", e)
             raise
 
+    def order_modify(
+        self,
+        order_id: str,
+        quantity: float,
+        order_type: Literal["LIMIT", "MARKET"],
+        price: float | None = None,
+    ):
+        try:
+            url = f"{BASE_URL_LIVE}/v3/order/modify"
+            payload = {
+                "order_id": order_id,
+                "quantity": quantity,
+                "price": 0 if order_type == "MARKET" else price,
+                "order_type": order_type,
+            }
+
+            headers = self._get_headers()
+
+            res = requests.put(url, json=payload, headers=headers)
+            res.raise_for_status()
+
+            data = res.json()["data"]
+            orders: list[str] = data["order_ids"] or []
+
+            return orders
+
+        except Exception as e:
+            print("Error modifying order:", e)
+            raise
+
+    def order_cancel(
+        self,
+        order_id: str,
+    ):
+        try:
+            url = f"{BASE_URL_LIVE}/v2/order/cancel?order_id={order_id}"
+
+            headers = self._get_headers()
+
+            res = requests.delete(url, headers=headers)
+            res.raise_for_status()
+
+            data = res.json()["data"]
+            orders: list[str] = data["order_ids"] or []
+
+            return orders
+
+        except Exception as e:
+            print("Error cancelling order:", e)
+            raise
+
     def order_get(self, order_id: str):
         if not order_id:
             print("Order ID is required.")
