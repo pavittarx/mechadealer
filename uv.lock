@@ -884,7 +884,7 @@ wheels = [
 
 [[package]]
 name = "kafkalib"
-version = "0.2.8"
+version = "0.3.0"
 source = { editable = "libs/kafkalib" }
 dependencies = [
     { name = "pydantic" },

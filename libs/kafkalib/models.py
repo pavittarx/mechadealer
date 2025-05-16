@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic import field_validator
-
 from .typelist import SignalAction, SignalType, OrderType, FillType
 
 
@@ -47,3 +46,4 @@ class Signal(BaseModel):
 class SignalEvent(Signal):
     strategy: str
     ticker: str
+    ts: datetime = Field(default_factory=datetime.now)
