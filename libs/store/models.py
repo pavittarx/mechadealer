@@ -1,4 +1,3 @@
-from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -25,7 +24,7 @@ class UserTransactions(BaseModel):
     created_at: str
 
 
-class Strategies(BaseModel):
+class Strategy(BaseModel):
     id: int
     name: str
     description: str
@@ -55,7 +54,7 @@ class Order(BaseModel):
     capital_used: float
     margin_used: float
     charges: float
-    ref_id: int
+    ref_id: int = Field(default=0)
     is_filled: bool = Field(default=False)
     is_cancelled: bool = Field(default=False)
     is_active: bool = Field(default=True)

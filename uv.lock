@@ -1112,6 +1112,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "sqlalchemy" },
+    { name = "store" },
 ]
 
 [package.metadata]
@@ -1121,6 +1122,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "sqlalchemy", specifier = ">=2.0.40" },
+    { name = "store", virtual = "libs/store" },
 ]
 
 [[package]]
@@ -2041,7 +2043,7 @@ wheels = [
 
 [[package]]
 name = "store"
-version = "0.1.1"
+version = "0.1.2"
 source = { virtual = "libs/store" }
 dependencies = [
     { name = "bcrypt" },
@@ -2064,7 +2066,7 @@ requires-dist = [
 
 [[package]]
 name = "strategy"
-version = "0.1.0"
+version = "0.1.1"
 source = { virtual = "libs/strategy" }
 dependencies = [
     { name = "datastore" },

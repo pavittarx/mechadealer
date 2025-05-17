@@ -1,5 +1,3 @@
-import datetime
-from sqlite3 import Date
 from sqlalchemy import (
     Table,
     Column,
@@ -40,13 +38,15 @@ strategies = Table(
     Column("name", String, unique=True),
     Column("description", String),
     Column("run_tf", String),
-    Column("capital", Float),
+    Column("units", Float, default=0),
+    Column("capital", Float, default=0),
     Column("capital_used", Float, default=0),
     Column("capital_remaining", Float, default=0),
     Column("leverage", Float, default=1),
     Column("pnl", Float, default=0),
     Column("unrelaized_pnl", Float, default=0),
     Column("realized_pnl", Float, default=0),
+    Column("is_active", String, default="false"),
     Column("created_at", DateTime, default="now()"),
 )
 
@@ -64,7 +64,17 @@ user_transactions = Table(
         ),
     ),
     Column("strategy_id", Integer, ForeignKey("strategies.id")),
+    Column("units_allotted", Float, default=0),
     Column("created_at", DateTime, default="now()"),
+)
+
+user_strategies = Table(
+    "user_strategies",
+    meta,
+    Column("id", Integer, primary_key=True),
+    Column("user_id", Integer, ForeignKey("users.id")),
+    Column("strategy_id", Integer, ForeignKey("strategies.id")),
+    Column("units", Float, default=0),
 )
 
 orders = Table(
