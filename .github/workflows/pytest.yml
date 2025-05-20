@@ -1,0 +1,32 @@
+name: Run Pytest
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"] # Specify the Python version(s) you use
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv (Python package installer)
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH # Add uv to PATH
+
+    - name: Install dependencies
+      run: |
+        uv pip install --system --upgrade pip
+        uv sync --system # Install dependencies from pyproject.toml and uv.lock including dev dependencies
+
+    - name: Run pytest
+      run: |
+        pytest

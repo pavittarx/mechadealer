@@ -24,7 +24,7 @@ kafkalib = { path = "libs/kafkalib", editable = true }
 storelib = { workspace = true }
 
 [dependency-groups]
-dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]
+dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0", "pytest>=8.0.0"]
 
 [tool.pyright]
 reportMissingTypeArgument = true
