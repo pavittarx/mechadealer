@@ -1,7 +1,7 @@
 from sqlalchemy.exc import SQLAlchemyError
-from tables import users, user_transactions
-from models import User
-from setup import engine
+from storelib.models import User
+from _setup import engine
+from _tables import users, user_transactions
 
 import bcrypt
 

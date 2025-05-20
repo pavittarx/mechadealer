@@ -1,8 +1,15 @@
 from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
-from tables import users, strategies, user_transactions, user_strategies, orders
-from models import Strategy, Order
-from setup import engine
+
+from .models import Strategy, Order
+from _setup import engine
+from _tables import (
+    users,
+    strategies,
+    user_transactions,
+    user_strategies,
+    orders,
+)
 
 
 def calculate_units_from_amount(
@@ -31,6 +38,8 @@ class Store:
     def create_strategy(self, strategy: Strategy):
         try:
             with engine.begin() as conn:
+                print(strategy)
+
                 conn.execute(
                     strategies.insert().values(
                         name=strategy.name,
@@ -43,11 +52,13 @@ class Store:
                         pnl=strategy.pnl,
                         unrealized_pnl=strategy.unrealized_pnl,
                         realized_pnl=strategy.realized_pnl,
+                        is_active=True,
                     )
                 )
                 conn.commit()
         except SQLAlchemyError as e:
             print(f"Error creating strategy: {e}")
+            raise
 
     def get_strategy(
         self, strategy_id: int | None = None, strategy_name: str | None = None

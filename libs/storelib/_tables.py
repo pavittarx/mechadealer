@@ -9,7 +9,7 @@ from sqlalchemy import (
     ForeignKey,
 )
 
-from setup import meta, engine
+from _setup import meta, engine
 
 users = Table(
     "users",
@@ -29,6 +29,7 @@ users = Table(
     Column("is_verified", String, default="false"),
     Column("created_at", DateTime, default="now()"),
     Column("updated_at", DateTime, default="now()"),
+    extend_existing=True,
 )
 
 strategies = Table(
@@ -44,10 +45,11 @@ strategies = Table(
     Column("capital_remaining", Float, default=0),
     Column("leverage", Float, default=1),
     Column("pnl", Float, default=0),
-    Column("unrelaized_pnl", Float, default=0),
+    Column("unrealized_pnl", Float, default=0),
     Column("realized_pnl", Float, default=0),
     Column("is_active", String, default="false"),
     Column("created_at", DateTime, default="now()"),
+    extend_existing=True,
 )
 
 user_transactions = Table(
@@ -66,6 +68,7 @@ user_transactions = Table(
     Column("strategy_id", Integer, ForeignKey("strategies.id")),
     Column("units_allotted", Float, default=0),
     Column("created_at", DateTime, default="now()"),
+    extend_existing=True,
 )
 
 user_strategies = Table(
@@ -75,14 +78,15 @@ user_strategies = Table(
     Column("user_id", Integer, ForeignKey("users.id")),
     Column("strategy_id", Integer, ForeignKey("strategies.id")),
     Column("units", Float, default=0),
+    extend_existing=True,
 )
 
 orders = Table(
     "orders",
     meta,
-    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("id", Integer, primary_key=True, autoincrement=True, unique=True),
     Column("strategy_id", String),
-    Column("broker_id", String, primary_key=True),
+    Column("broker_id", String, primary_key=True, unique=True),
     Column("dt", DateTime),
     Column("ticker", String),
     Column("quantity", Float),
@@ -101,6 +105,7 @@ orders = Table(
     Column("version", Integer),
     Column("created_at", DateTime, default="now()"),
     Column("updated_at", DateTime, default="now()"),
+    extend_existing=True,
 )
 
 trade_stats = Table(
@@ -112,6 +117,7 @@ trade_stats = Table(
     Column("order_id", Integer, ForeignKey("orders.id")),
     Column("ticker", String),
     Column("pnl", Float, default=0),
+    extend_existing=True,
 )
 
 meta.create_all(engine)

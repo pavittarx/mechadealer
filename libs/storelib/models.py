@@ -25,12 +25,12 @@ class UserTransactions(BaseModel):
 
 
 class Strategy(BaseModel):
-    id: int
+    id: Optional[int] = None
     name: str
     description: str
     run_tf: str
     capital: float
-    capital_used: float
+    capital_used: float = Field(default=0)
     capital_remaining: float
     leverage: float = Field(default=1)
     pnl: float = Field(default=0)
@@ -40,7 +40,7 @@ class Strategy(BaseModel):
 
 
 class Order(BaseModel):
-    id: int
+    id: Optional[int] = None
     strategy_id: int
     broker_id: str
     dt: str
@@ -54,7 +54,7 @@ class Order(BaseModel):
     capital_used: float
     margin_used: float
     charges: float
-    ref_id: int = Field(default=0)
+    ref_id: Optional[int] = None
     is_filled: bool = Field(default=False)
     is_cancelled: bool = Field(default=False)
     is_active: bool = Field(default=True)
@@ -64,7 +64,7 @@ class Order(BaseModel):
 
 
 class TradeStats(BaseModel):
-    id: int
+    id: Optional[int] = None
     strategy_id: int
     strategy_name: str
     order_id: int
