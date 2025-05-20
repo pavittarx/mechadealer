@@ -85,7 +85,7 @@ orders = Table(
     "orders",
     meta,
     Column("id", Integer, primary_key=True, autoincrement=True, unique=True),
-    Column("strategy_id", String),
+    Column("strategy_id", Integer, ForeignKey("strategies.id")),
     Column("broker_id", String, primary_key=True, unique=True),
     Column("dt", DateTime),
     Column("ticker", String),

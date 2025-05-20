@@ -283,6 +283,23 @@ class Store:
             print(f"Error fetching order: {e}")
             raise
 
+    def get_open_orders(self, strategy_id: int):
+        if not strategy_id:
+            raise ValueError("Either strategy_id or strategy_name must be provided")
+
+        try:
+            with engine.begin() as conn:
+                query = orders.select().where(
+                    (orders.c.strategy_id == strategy_id)
+                    & (orders.c.type == "ENTRY")
+                    & (orders.c.is_active is True)
+                )
+                result = conn.execute(query).fetchall()
+                return result
+        except SQLAlchemyError as e:
+            print(f"Error fetching open orders: {e}")
+            raise
+
     def get_ref_orders(self, ref_id: str):
         if not ref_id:
             raise ValueError("ref_id must be provided")
