@@ -24,8 +24,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install --system --upgrade pip
-        uv sync --system # Install dependencies from pyproject.toml and uv.lock including dev dependencies
+        uv pip install --upgrade pip
+        uv sync # Install dependencies from pyproject.toml and uv.lock including dev dependencies
 
     - name: Run pytest
       run: |
