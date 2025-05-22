@@ -16,8 +16,8 @@ This project uses `pytest` for testing. To run the tests locally:
     uv sync
     ```
 2.  Navigate to the root directory of the project in your terminal.
-3.  Run `pytest`:
+3.  Run the main test script:
     ```bash
-    pytest
+    python tests/main.py
     ```
-    This will automatically discover and run all tests in the `tests` directory.
+    This script will use `pytest` to discover and run all tests in the `tests` directory.
