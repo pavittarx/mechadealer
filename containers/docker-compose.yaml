@@ -58,3 +58,18 @@ services:
       SERVER_SERVLET_CONTEXTPATH: "/"
     depends_on:
       - kafka
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: 1235789
+      POSTGRES_DB: pgdb
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
