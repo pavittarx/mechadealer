@@ -12,7 +12,7 @@ members = [
     "datasync",
     "mechadealer",
     "orders-management",
-    "store",
+    "storelib",
     "strategy",
 ]
 
@@ -884,7 +884,7 @@ wheels = [
 
 [[package]]
 name = "kafkalib"
-version = "0.2.8"
+version = "0.3.4"
 source = { editable = "libs/kafkalib" }
 dependencies = [
     { name = "pydantic" },
@@ -986,10 +986,10 @@ dependencies = [
     { name = "kafka" },
     { name = "kafkalib" },
     { name = "nox" },
-    { name = "ntplib" },
     { name = "pendulum" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "storelib" },
 ]
 
 [package.dev-dependencies]
@@ -1005,10 +1005,10 @@ requires-dist = [
     { name = "kafka" },
     { name = "kafkalib", editable = "libs/kafkalib" },
     { name = "nox", specifier = ">=2025.2.9" },
-    { name = "ntplib", specifier = ">=0.4.0" },
     { name = "pendulum", specifier = ">=3.0.0" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
+    { name = "storelib", editable = "libs/storelib" },
 ]
 
 [package.metadata.requires-dev]
@@ -1042,15 +1042,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0d/22/84a2d3442cb33e6fb1af18172a15deb1eea3f970417f1f4c5fa1600143e8/nox-2025.2.9.tar.gz", hash = "sha256:d50cd4ca568bd7621c2e6cbbc4845b3b7f7697f25d5fb0190ce8f4600be79768", size = 4021103 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/57/ca/64e634c056cba463cac743735660a772ab78eb26ec9759e88de735f2cd27/nox-2025.2.9-py3-none-any.whl", hash = "sha256:7d1e92d1918c6980d70aee9cf1c1d19d16faa71c4afe338fffd39e8a460e2067", size = 71315 },
-]
-
-[[package]]
-name = "ntplib"
-version = "0.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b4/14/6b018fb602602d9f6cc7485cbad7c1be3a85d25cea18c233854f05284aed/ntplib-0.4.0.tar.gz", hash = "sha256:899d8fb5f8c2555213aea95efca02934c7343df6ace9d7628a5176b176906267", size = 7135 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/8c/41da70f6feaca807357206a376b6de2001b439c7f78f53473a914a6dbd1e/ntplib-0.4.0-py2.py3-none-any.whl", hash = "sha256:8d27375329ed7ff38755f7b6d4658b28edc147cadf40338a63a0da8133469d60", size = 6849 },
 ]
 
 [[package]]
@@ -1118,18 +1109,22 @@ name = "orders-management"
 version = "0.1.0"
 source = { virtual = "projects/orders_management" }
 dependencies = [
+    { name = "datastore" },
     { name = "kafkalib" },
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "sqlalchemy" },
+    { name = "storelib" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "datastore", editable = "libs/datastore" },
     { name = "kafkalib", editable = "libs/kafkalib" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "sqlalchemy", specifier = ">=2.0.40" },
+    { name = "storelib", editable = "libs/storelib" },
 ]
 
 [[package]]
@@ -2049,14 +2044,15 @@ wheels = [
 ]
 
 [[package]]
-name = "store"
-version = "0.1.0"
-source = { virtual = "libs/store" }
+name = "storelib"
+version = "0.2.7"
+source = { editable = "libs/storelib" }
 dependencies = [
     { name = "bcrypt" },
     { name = "psycopg2-binary" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "requests" },
     { name = "sqlalchemy" },
 ]
 
@@ -2066,12 +2062,13 @@ requires-dist = [
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
+    { name = "requests", specifier = ">=2.32.3" },
     { name = "sqlalchemy", specifier = ">=2.0.40" },
 ]
 
 [[package]]
 name = "strategy"
-version = "0.1.0"
+version = "0.1.1"
 source = { virtual = "libs/strategy" }
 dependencies = [
     { name = "datastore" },

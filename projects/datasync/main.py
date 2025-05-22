@@ -7,7 +7,7 @@ from prefect.schedules import RRule
 
 from sources.upstox import UpstoxClient
 from datastore import Database
-from kafkalib import Kafka, DataFeedTopics
+from kafkalib import Kafka, Topics
 
 load_dotenv()
 db = Database()
@@ -232,7 +232,7 @@ def trigger_kafka_events(tick: dict[str, str], data):
     k = Kafka()
     app = k.get_app()
 
-    feed_1M = app.topic(name=DataFeedTopics.FEED_1M.value, value_serializer="json")
+    feed_1M = app.topic(name=Topics.FEED_1M.value.name, value_serializer="json")
     row = data.iloc[0]
 
     message = {
@@ -276,8 +276,7 @@ def fetch_non_priority_tickers():
 
 
 if __name__ == "__main__":
-    # Fetch and save data for priority tickers
-    # sync_instruments()
+    sync_instruments()
 
     fetch_priority_tickers.serve(
         name="fetch-priority-tickers",

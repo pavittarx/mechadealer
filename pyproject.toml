@@ -4,10 +4,10 @@ dependencies = [
   "kafka",
   "kafkalib",
   "nox>=2025.2.9",
-  "ntplib>=0.4.0",
   "pendulum>=3.0.0",
   "pydantic>=2.10.6",
   "python-dotenv>=1.1.0",
+  "storelib",
 ]
 description = "Add your description here"
 name = "mechadealer"
@@ -16,11 +16,12 @@ requires-python = ">=3.12"
 version = "0.1.0"
 
 [tool.uv.workspace]
-members = ["projects/*", "libs/datastore", "libs/strategy", "libs/store"]
+members = ["projects/*", "libs/datastore", "libs/strategy", "libs/storelib"]
 
 [tool.uv.sources]
 datastore = { workspace = true }
 kafkalib = { path = "libs/kafkalib", editable = true }
+storelib = { workspace = true }
 
 [dependency-groups]
 dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]

@@ -121,9 +121,9 @@ if __name__ == "__main__":
         return [
             Signal(
                 quantity=1,
-                action="buy",
-                type="entry",
-                order_type="market",
+                action="BUY",
+                type="ENTRY",
+                order_type="MARKET",
             )
         ]
 

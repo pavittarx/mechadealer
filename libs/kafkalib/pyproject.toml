@@ -1,7 +1,6 @@
 [project]
 name = "kafkalib"
-version = "0.2.8"
-description = "Add your description here"
+version = "0.3.4"
 readme = "README.md"
 authors = [
     { name = "pavittarx", email = "29155477+pavittarx@users.noreply.github.com" },
