@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
+from typing import Literal
 
 from .models import Strategy, Order
 from _setup import engine
@@ -283,17 +284,20 @@ class Store:
             print(f"Error fetching order: {e}")
             raise
 
-    def get_open_orders(self, strategy_id: int):
+    def get_orders(
+        self, strategy_id: int, type: Literal["ENTRY", "EXIT", "SL", "TP"] | None = None
+    ):
         if not strategy_id:
             raise ValueError("Either strategy_id or strategy_name must be provided")
 
+        where = (orders.c.strategy_id == strategy_id) & (orders.c.is_active == "true")
+
+        if type:
+            where = where & (orders.c.type == type)
+
         try:
             with engine.begin() as conn:
-                query = orders.select().where(
-                    (orders.c.strategy_id == strategy_id)
-                    & (orders.c.type == "ENTRY")
-                    & (orders.c.is_active is True)
-                )
+                query = orders.select().where(where)
                 result = conn.execute(query).fetchall()
                 return result
         except SQLAlchemyError as e:
@@ -306,7 +310,9 @@ class Store:
 
         try:
             with engine.begin() as conn:
-                query = orders.select().where(orders.c.ref_id == ref_id)
+                query = orders.select().where(
+                    (orders.c.ref_id == ref_id) & (orders.c.is_active == "true")
+                )
                 result = conn.execute(query).fetchall()
                 return result
         except SQLAlchemyError as e:
@@ -342,48 +348,38 @@ class Store:
             print(f"Error saving order: {e}")
             raise
 
-    def update_order(
-        self,
-        id: int | str,
-        quantity: float,
-        is_filled: bool,
-        is_canceled: bool,
-        is_active: bool,
-    ):
-        order_id = None
-        broker_id = None
-
-        if isinstance(id, int):
-            order_id = id
-
-        if isinstance(id, str):
-            broker_id = id
-
+    def update_order(self, order):
         with engine.begin() as conn:
             try:
                 query_order = orders.select().where(
-                    (orders.c.id == order_id) | (orders.c.broker_id == broker_id)
+                    (orders.c.id == order.order_id)
+                    | (orders.c.broker_id == order.broker_id)
                 )
-                order = conn.execute(query_order).fetchone()
 
-                if not order:
+                order_details = conn.execute(query_order).fetchone()
+
+                if not order_details:
                     raise ValueError("Order not found")
 
-                if order_id and order.id != order_id:
+                if order.id and order.id != order_details.id:
                     raise ValueError("Order ID does not match the fetched order")
 
-                if broker_id and order.broker_id != broker_id:
+                if order.broker_id != order_details.broker_id:
                     raise ValueError("Broker ID does not match the fetched order")
 
                 query = (
                     orders.update()
                     .where((orders.c.id == order.id))
                     .values(
-                        quantity=quantity,
-                        is_filled=is_filled,
-                        is_cancelled=is_canceled,
-                        is_active=is_active,
-                        version=order.version + 1,
+                        price=order.price,
+                        quantity=order.quantity,
+                        exit_quantity=order.exit_quantity,
+                        is_filled=order.is_filled,
+                        capital_used=order.capital_used,
+                        margin_used=order.margin_used,
+                        is_cancelled=order.is_cancelled,
+                        is_active=order.is_active,
+                        version=order_details.version + 1,
                         updated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     )
                 )
