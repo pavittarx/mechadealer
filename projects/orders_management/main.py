@@ -1,15 +1,21 @@
+from coreutils import Logger
 from kafkalib import SignalEvent
+from pydantic.type_adapter import R
 from sources import UpstoxBroker
-from storelib import Store, Order, Strategy
+from storelib import Store, Order
 from typing import Any
-import logging
 
 store = Store()
-
-logging.getLogger("sqlalchemy.engine").setLevel(logging.ERROR)
+log = Logger("orders_management")
+logger = log.get_logger()
 
 
 def _sync_order(order_id: str, order_details: Any):
+    logger.info(
+        f"Syncing order {order_id}",
+        extra={"order_id": order_id, "order_details": order_details},
+    )
+
     if not order_details:
         raise Exception("Order details are required.", order_id)
 
@@ -112,22 +118,42 @@ def handle_stop_orders(order_id: int):
 
 
 def on_entry_signal(signal: SignalEvent):
+    logger.info(
+        "[SIGNAL] on_entry_signal",
+        extra={"signal": signal},
+    )
+
     try:
         broker = UpstoxBroker(strategy=signal.strategy)
 
         # Check if the strategy has appropriate balance
         strategy = store.get_strategy(strategy_name=signal.strategy)
         if not strategy:
-            raise ValueError("Strategy not found in store.")
+            logger.error(
+                "[ENTRY] Strategy not found in store.", extra={"signal": signal}
+            )
+            return
 
         balance = strategy.capital_remaining
         if balance is None or balance <= 0:
-            raise Exception("Strategy has no balance available.")
-
-        if balance < signal.quantity * broker.fetch_ticker_ltp(signal.ticker):
-            raise Exception(
-                "Strategy does not have sufficient balance to execute order."
+            logger.error(
+                "[ENTRY] Insufficient balance in strategy.",
+                extra={"signal": signal, "strategy": strategy},
             )
+            return
+
+        required_amount = signal.quantity * broker.fetch_ticker_ltp(signal.ticker)
+        if balance < required_amount:
+            logger.error(
+                "[ENTRY] Insufficient balance",
+                extra={
+                    "signal": signal,
+                    "strategy": strategy,
+                    "balance": balance,
+                    "required": required_amount,
+                },
+            )
+            return
 
         orders = broker.order_send(
             ticker=signal.ticker,
@@ -137,13 +163,25 @@ def on_entry_signal(signal: SignalEvent):
         )
 
         if not orders:
-            raise Exception("Order Execution failed at broker.", orders)
+            logger.error(
+                "[ENTRY] Order Execution failed at broker.",
+                extra={"signal": signal, "orders": orders},
+            )
+            return
 
         order_id = orders[0]
         order_details = broker.order_get(order_id=order_id)
 
         if not order_details:
-            raise Exception("Order details not found in broker.", order_id)
+            logger.error(
+                "[ENTRY] Order details not found in broker.",
+                extra={
+                    "signal": signal,
+                    "order_id": order_id,
+                    "order_details": order_details,
+                },
+            )
+            return
 
         entry_order = Order(
             broker_id=order_id,
@@ -161,7 +199,14 @@ def on_entry_signal(signal: SignalEvent):
             charges=0,
         )
 
+        store.save_order(entry_order)
+        logger.info(
+            f"[ENTRY] {entry_order.id} / {entry_order.broker_id} Order executed successfully",
+            extra={"entry_order": entry_order, "signal": signal},
+        )
+
         if signal.sl:
+            logger.info("[ENTRY] SL found, adding stop order", extra={"signal": signal})
             sl_diff = signal.sl * entry_order.price
             action = "SELL" if signal.action == "BUY" else "BUY"
 
@@ -180,12 +225,20 @@ def on_entry_signal(signal: SignalEvent):
             )
 
             if not sl_order:
-                raise Exception("SL Order Execution failed at broker.", sl_order)
+                logger.error(
+                    "SL Order Execution failed at broker.",
+                    extra={"signal": signal, "sl_order": sl_order},
+                )
+                return
 
             sl_order_details = broker.order_get(order_id=sl_order[0])
 
             if not sl_order_details:
-                raise Exception("SL Order details not found in broker.", sl_order[0])
+                logger.error(
+                    "SL Order details not found in broker.",
+                    extra={"signal": signal, "sl_order": sl_order},
+                )
+                return
 
             sl_order = Order(
                 broker_id=order_id,
@@ -204,80 +257,142 @@ def on_entry_signal(signal: SignalEvent):
             )
 
             store.save_order(sl_order)
+            logger.info(
+                "[ENTRY] SL Order executed successfully",
+                extra={
+                    "entry_order": entry_order,
+                    "sl_order": sl_order,
+                    "signal": signal,
+                },
+            )
 
-        # Check if TP exists, add a target order
+        # TODO: handle adding TP orders
         if signal.tp:
             pass
 
-        store.save_order(entry_order)
-
     except Exception as e:
-        print(f"Error processing entry signal: {e}")
+        logger.error(
+            "Error processing entry signal",
+            extra={
+                "error": str(e),
+                "signal": signal,
+            },
+        )
 
 
 def on_exit_signal(signal: SignalEvent):
-    broker = UpstoxBroker(strategy=signal.strategy)
+    logger.info(
+        "[SIGNAL] on_exit_signal",
+        extra={"event": signal},
+    )
 
-    if signal.type != "EXIT":
-        raise Exception("Only Exit Signals are allowed")
+    try:
+        broker = UpstoxBroker(strategy=signal.strategy)
 
-    strategy = store.get_strategy(strategy_name=signal.strategy)
-
-    if not strategy:
-        raise Exception("Strategy not found in store.")
-
-    open_orders = store.get_orders(strategy.id, "ENTRY")
-
-    if not open_orders:
-        raise Exception("No open orders found for the strategy.")
-
-    is_stop_order_executed = False
-    for order in open_orders:
-        # Check SL & TP orders
-
-        is_stop_order_executed = handle_stop_orders(order.id)
-
-        if not is_stop_order_executed:
-            close_order_id = broker.order_send(
-                ticker=order.ticker,
-                action="SELL" if order.action == "BUY" else "BUY",
-                order_type=signal.order_type,
-                quantity=order.quantity,
+        if signal.type != "EXIT":
+            logger.error(
+                "[EXIT] Signal type is not EXIT",
+                extra={"event": signal},
             )
+            return
 
-            if not close_order_id:
-                raise Exception("Order Execution failed at broker.", close_order_id)
+        strategy = store.get_strategy(strategy_name=signal.strategy)
 
-            close_order_id = close_order_id[0]
-            order_details = broker.order_get(order_id=close_order_id)
-
-            if not order_details:
-                raise Exception("Order details not found in broker.", close_order_id)
-
-            entry_order = Order(
-                **order.__dict__, exit_quantity=order.quantity, is_active=False
+        if not strategy:
+            logger.error(
+                "[EXIT] Strategy not found in store.", extra={"signal": signal}
             )
+            return
 
-            store.update_order(entry_order)
+        open_orders = store.get_orders(strategy.id, "ENTRY")
 
-            close_order = Order(
-                broker_id=close_order_id,
-                strategy_id=strategy.id,
-                ticker=signal.ticker,
-                action=signal.action,
-                type=signal.type,
-                order_type=signal.order_type,
-                quantity=order_details["filled_quantity"],
-                price=order_details["average_price"],
-                dt=order_details["order_timestamp"],
-                capital_used=order_details["average_price"] * order_details["quantity"],
-                margin_used=order_details["average_price"] * order_details["quantity"],
-                is_filled=True if order_details["filled_quantity"] > 0 else False,
-                ref_id=order.id,
-                charges=0,
+        if not open_orders:
+            logger.info(
+                "No Open Orders found",
+                extra={
+                    "event": signal,
+                    "open_orders": open_orders,
+                    "strategy": strategy,
+                },
             )
+            return
 
-            store.save_order(close_order)
+        logger.info("[EXIT]: Open Orders found", extra={"open_orders": open_orders})
+
+        is_stop_order_executed = False
+        for order in open_orders:
+            logger.info("[EXIT] Processing Exit Signal", extra={"order": order})
+
+            is_stop_order_executed = handle_stop_orders(order.id)
+
+            if not is_stop_order_executed:
+                logger.info(
+                    "[Exit] Stop Orders were not executed", extra={"order": order}
+                )
+
+                close_order_id = broker.order_send(
+                    ticker=order.ticker,
+                    action="SELL" if order.action == "BUY" else "BUY",
+                    order_type=signal.order_type,
+                    quantity=order.quantity,
+                )
+
+                if not close_order_id:
+                    logger.error(
+                        "Order Execution failed at broker.",
+                        extra={"open_order": order, "close_order_id": close_order_id},
+                    )
+                    continue
+
+                close_order_id = close_order_id[0]
+                order_details = broker.order_get(order_id=close_order_id)
+
+                if not order_details:
+                    logger.error(
+                        "Order details not found in broker.",
+                        extra={"close_order_id": close_order_id, "open_order": order},
+                    )
+                    continue
+
+                entry_order = Order(
+                    **order.__dict__, exit_quantity=order.quantity, is_active=False
+                )
+
+                store.update_order(entry_order)
+
+                close_order = Order(
+                    broker_id=close_order_id,
+                    strategy_id=strategy.id,
+                    ticker=signal.ticker,
+                    action=signal.action,
+                    type=signal.type,
+                    order_type=signal.order_type,
+                    quantity=order_details["filled_quantity"],
+                    price=order_details["average_price"],
+                    dt=order_details["order_timestamp"],
+                    capital_used=order_details["average_price"]
+                    * order_details["quantity"],
+                    margin_used=order_details["average_price"]
+                    * order_details["quantity"],
+                    is_filled=True if order_details["filled_quantity"] > 0 else False,
+                    ref_id=order.id,
+                    charges=0,
+                )
+
+                logger.info(
+                    "[EXIT] Order exited successfully",
+                    extra={
+                        "order_details": order_details,
+                        "entry_order": entry_order,
+                        "close_order": close_order,
+                    },
+                )
+
+                store.save_order(close_order)
+    except Exception as e:
+        logger.error(
+            "Error Processing Exit Signal", extra={"error": str(e), "signal": signal}
+        )
 
 
 if __name__ == "__main__":
@@ -292,26 +407,26 @@ if __name__ == "__main__":
     #     )
     # )
 
-    # on_entry_signal(
-    #     SignalEvent(
-    #         strategy="test_strategy",
-    #         ticker="IDEA.NSE",
-    #         action="BUY",
-    #         type="ENTRY",
-    #         order_type="MARKET",
-    #         quantity=1,
-    #     ),
-    # )
+    on_entry_signal(
+        SignalEvent(
+            strategy="test_strategy",
+            ticker="IDEA.NSE",
+            action="BUY",
+            type="ENTRY",
+            order_type="MARKET",
+            quantity=1,
+        ),
+    )
 
-    # on_exit_signal(
-    #     SignalEvent(
-    #         strategy="test_strategy",
-    #         ticker="IDEA.NSE",
-    #         action="SELL",
-    #         type="EXIT",
-    #         order_type="MARKET",
-    #         quantity=1,
-    #     ),
-    # )
+    on_exit_signal(
+        SignalEvent(
+            strategy="test_strategy",
+            ticker="IDEA.NSE",
+            action="SELL",
+            type="EXIT",
+            order_type="MARKET",
+            quantity=1,
+        ),
+    )
 
     pass
