@@ -1991,7 +1991,7 @@ wheels = [
 
 [[package]]
 name = "storelib"
-version = "0.2.7"
+version = "0.2.15"
 source = { editable = "libs/storelib" }
 dependencies = [
     { name = "bcrypt" },
