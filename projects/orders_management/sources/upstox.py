@@ -37,71 +37,13 @@ class UpstoxBroker:
             "Content-Type": "application/json",
         }
 
-    def get_token(self):
-        # TODO: implement token mechanism
-        return "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzSEM1WjIiLCJqdGkiOiI2ODJjMjhkNDZkNzM1ODU3YjQ5MjI0MzMiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc0NzcyNDUwMCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzQ3Nzc4NDAwfQ.Bi5XlohC5IvzEv3ANbT6ROSWvVVWw6x9IdnaE8GsInA"
+    def get_token(self, live: bool = False):
+        # TODO: to be implemented with live app.
+        # sandbox token provided below
+        # if not live:
+        #     return "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzSEM1WjIiLCJqdGkiOiI2ODI1NTVkNjdmZWVjZjQ1YTEzNWI5MmEiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaWF0IjoxNzQ3Mjc3MjcwLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE3NDk4NTIwMDB9.j6QlJokP-yyxNSqMUcJPUFryUyeMKbJNKTGAUMM62mQ"
 
-    def _get_instrument_key(self, ticker: str):
-        if not ticker:
-            raise ValueError("Ticker is required.")
-
-        data = ds.get_ticker(ticker)
-
-        if not data:
-            raise ValueError("Ticker not found in the datastore.")
-
-        return data[1]
-
-    def fetch_ticker_ltp(self, ticker: str):
-        #  TODO: Undo after testing
-        return 50
-
-        try:
-            instrument_key = self._get_instrument_key(ticker)
-
-            url = f"{BASE_URL}/v3/market-quote/ltp"
-            headers = self._get_headers()
-            res = requests.get(
-                url,
-                headers=headers,
-                params={"instrument_token": instrument_key},
-            )
-            res.raise_for_status()
-
-            data = res.json()["data"]
-            return data
-
-        except Exception as e:
-            print("Error fetching LTP:", e)
-            raise
-
-    def fetch_fund_details(self):
-        try:
-            url = f"{BASE_URL}/user/get-funds-and-margin"
-            headers = self._get_headers()
-            res = requests.get(url, headers=headers)
-            res.raise_for_status()
-            data = res.json()["data"]
-
-            return data
-
-        except Exception as e:
-            print("Error fetching fund details:", e)
-            raise
-
-    def fetch_trade_charges(self):
-        try:
-            url = f"{BASE_URL}/v2/charges/brokerage"
-            headers = self._get_headers()
-            res = requests.get(url, headers=headers)
-            res.raise_for_status()
-            data = res.json()["data"]
-
-            return data
-
-        except Exception as e:
-            print("Error fetching charge details:", e)
-            raise
+        return "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzSEM1WjIiLCJqdGkiOiI2ODI1NGVjZWZlMDgyYTU0NDEzYTU0NDQiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc0NzI3NTQ3MCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzQ3MzQ2NDAwfQ.Ywa0hGUu_HEhMXOkKyuv0KtgHgDdxr-1T_S5yrddkXA"
 
     def fetch_account_balance(self):
         try:
@@ -124,7 +66,7 @@ class UpstoxBroker:
         ticker: str,
         action: Literal["BUY", "SELL"],
         quantity: float,
-        order_type: Literal["LIMIT", "MARKET", "SL", "SL-M"],
+        order_type: Literal["LIMIT", "MARKET"],
         price: float | None = None,
     ):
         try:

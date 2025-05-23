@@ -10,9 +10,7 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "requests>=2.32.3",
     "sqlalchemy>=2.0.40",
-    "storelib",
 ]
 
 [tool.uv.sources]
 datastore = { workspace = true }
-storelib = { workspace = true }
