@@ -16,12 +16,7 @@ class Users:
         # Placeholder for password verification logic
         return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
 
-        return password == hashed_password
-
     def create_user(self, name: str, password: str, username: str, capital: float = 0):
-        if not name or not password or not username:
-            raise ValueError("Name, password, and username are required")
-
         conn = engine.connect()
         query = users.select().where(users.c.username == username)
         result = conn.execute(query).fetchone()
@@ -38,7 +33,17 @@ class Users:
         result = conn.execute(ins)
         conn.commit()
 
-        print(result)
+        result = result.fetchone()
+
+        if result is not None:
+            result = {
+                "id": result.id,
+                "name": name,
+                "username": username,
+                "capital": capital,
+            }
+
+        return result
 
     def login(self, username: str, password: str):
         if not username or not password:
@@ -46,22 +51,18 @@ class Users:
 
         conn = engine.connect()
         query = users.select().where(users.c.username == username)
-        result = conn.execute(query).fetchone()
+        user = conn.execute(query).fetchone()
 
-        if result and self._verify_password(password, result.password):
-            print("Login successful")
+        if user and self._verify_password(password, user.password):
             return User(
-                id=result.id,
-                name=result.name,
-                username=result.username,
-                email=result.email,
-                capital=result.capital,
-                created_at=result.created_at,
-                updated_at=result.updated_at,
+                id=user.id,
+                name=user.name,
+                username=user.username,
+                email=user.email,
+                capital=user.capital,
             )
         else:
-            print("Invalid User or Credentials")
-            return None
+            raise Exception("Invalid User or Credentials")
 
     def get_user(self, user_id: int):
         if not user_id:
