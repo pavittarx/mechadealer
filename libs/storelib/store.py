@@ -392,3 +392,28 @@ class Store:
                 print(f"Error updating order: {e}")
                 conn.rollback()
                 raise
+
+    def get_strategies(self):
+        try:
+            with engine.begin() as conn:
+                query = strategies.select()
+                result = conn.execute(query).fetchall()
+                return result
+        except SQLAlchemyError as e:
+            print(f"Error fetching strategies: {e}")
+            raise
+
+    def get_user_strategies(self, user_id: int):
+        if not user_id:
+            raise ValueError("user_id must be provided")
+
+        try:
+            with engine.begin() as conn:
+                query = user_strategies.select().where(
+                    user_strategies.c.user_id == user_id
+                )
+                result = conn.execute(query).fetchall()
+                return result
+        except SQLAlchemyError as e:
+            print(f"Error fetching strategies: {e}")
+            raise

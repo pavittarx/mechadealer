@@ -5,6 +5,11 @@ from typing import Dict, Annotated, TypedDict
 from storelib import Store, Users
 import jwt
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
 
 
 app = FastAPI()
@@ -130,6 +135,31 @@ async def get_user(
 
         if not res:
             raise Exception("User not found")
+
+        return {
+            "is_error": False,
+            "is_success": True,
+            "message": "Strategies fetched successfully",
+            "data": res,
+        }
+    except Exception as e:
+        return {
+            "is_error": True,
+            "is_success": False,
+            "message": str(e),
+            "data": None,
+        }
+
+
+@app.get("/strategies")
+def get_strategies():
+    try:
+        res = store.get_strategies()
+
+        if not res:
+            raise Exception("Strategies not found")
+
+        res = [row._mapping for row in res]
 
         return {
             "is_error": False,
