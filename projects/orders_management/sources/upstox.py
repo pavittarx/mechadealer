@@ -39,7 +39,7 @@ class UpstoxBroker:
 
     def get_token(self):
         # TODO: implement token mechanism
-        return "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzSEM1WjIiLCJqdGkiOiI2ODJjMjhkNDZkNzM1ODU3YjQ5MjI0MzMiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc0NzcyNDUwMCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzQ3Nzc4NDAwfQ.Bi5XlohC5IvzEv3ANbT6ROSWvVVWw6x9IdnaE8GsInA"
+        return "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzSEM1WjIiLCJqdGkiOiI2ODMwMjNmMmM5ZDQzODMwY2ZiOTljOTIiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc0Nzk4NTM5NCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzQ4MDM3NjAwfQ.OMS7LajvDmfXuTnlZj0jBvMtPT9G2LvclVPPydmmCa8"
 
     def _get_instrument_key(self, ticker: str):
         if not ticker:
@@ -53,23 +53,16 @@ class UpstoxBroker:
         return data[1]
 
     def fetch_ticker_ltp(self, ticker: str):
-        #  TODO: Undo after testing
-        return 50
-
         try:
             instrument_key = self._get_instrument_key(ticker)
 
-            url = f"{BASE_URL}/v3/market-quote/ltp"
+            url = f"{BASE_URL}/v3/market-quote/ltp?instrument_key={instrument_key}"
             headers = self._get_headers()
-            res = requests.get(
-                url,
-                headers=headers,
-                params={"instrument_token": instrument_key},
-            )
+            res = requests.get(url, headers=headers)
             res.raise_for_status()
 
-            data = res.json()["data"]
-            return data
+            data = [value for key, value in res.json()["data"].items()][0]
+            return data["last_price"]
 
         except Exception as e:
             print("Error fetching LTP:", e)
@@ -131,8 +124,7 @@ class UpstoxBroker:
             ticker = ds.get_ticker(ticker)
 
             if not ticker:
-                print("Ticker not found in the datastore.")
-                return
+                raise ValueError("Ticker not found in the datastore.")
 
             instrument_token = ticker[1]
 
@@ -219,8 +211,7 @@ class UpstoxBroker:
 
     def order_get(self, order_id: str):
         if not order_id:
-            print("Order ID is required.")
-            return
+            raise ValueError("Order ID is required.")
 
         try:
             url = f"{BASE_URL}/v2/order/details"
@@ -279,4 +270,88 @@ class UpstoxBroker:
 
         except Exception as e:
             print("Error while fetching orders", e)
+            raise
+
+    def order_send_gtt(
+        self,
+        ticker: str,
+        price: float,
+        action: Literal["BUY", "SELL"],
+        quantity: float,
+        trigger_type: Literal["IMMEDIATE", "BELOW", "ABOVE"],
+    ):
+        try:
+            ticker = ds.get_ticker(ticker)
+
+            if not ticker:
+                raise ValueError("Ticker not found in the datastore.")
+
+            instrument_token = ticker[1]
+
+            url = f"{BASE_URL}/v3/order/gtt/place"
+            payload = {
+                "type": "SINGLE",
+                "product": "D",
+                "instrument_token": instrument_token,
+                "quantity": quantity,
+                "transaction_type": action,
+                "rules": [
+                    {
+                        "strategy": "ENTRY",
+                        "trigger_type": trigger_type,
+                        "trigger_price": price,
+                    }
+                ],
+            }
+
+            headers = self._get_headers()
+
+            res = requests.post(url, json=payload, headers=headers)
+            res.raise_for_status()
+
+            data = res.json()["data"]
+            orders: list[str] = data["order_ids"] or []
+
+            return orders
+
+        except Exception as e:
+            print("Error sending order:", e)
+            raise
+
+    def order_cancel_gtt(self, order_id: str):
+        try:
+            url = f"{BASE_URL}/v3/order/gtt/cancel"
+
+            headers = self._get_headers()
+            payload = {
+                "gtt_order_id": order_id,
+            }
+            res = requests.delete(url, headers=headers, json=payload)
+            res.raise_for_status()
+
+            data = res.json()["data"]
+            orders: list[str] = data["order_ids"] or []
+
+            return orders
+
+        except Exception as e:
+            print("Error cancelling GTT order:", e)
+            raise
+
+    def order_get_gtt(self, order_id: str):
+        if not order_id:
+            raise ValueError("Order ID is required.")
+
+        try:
+            url = f"{BASE_URL}/v3/order/gtt"
+            headers = self._get_headers()
+            url += f"?gtt_order_id={order_id}"
+            res = requests.get(url, headers=headers)
+            res.raise_for_status()
+            data = res.json()["data"]
+
+            return data
+
+        except Exception as e:
+            print("Error fetching GTT order status:", e)
             raise

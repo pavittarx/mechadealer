@@ -1,6 +1,5 @@
 from coreutils import Logger
 from kafkalib import SignalEvent
-from pydantic.type_adapter import R
 from sources import UpstoxBroker
 from storelib import Store, Order
 from typing import Any
@@ -85,28 +84,40 @@ def _cancel_order(order_id: str, order_details: Any):
 
 
 def handle_stop_orders(order_id: int):
+    logger.info(f"[STOP] Handling Stop Orders for {order_id}")
     order = store.get_order(order_id)
 
     if not order:
-        raise Exception("Order not found in store.", order_id)
+        logger.error("Order not found in store.", order_id)
+        return
 
     strategy = store.get_strategy(strategy_id=order.strategy_id)
 
     if not strategy:
-        raise Exception("Strategy not found in store.", order.strategy_id)
+        logger.error(
+            "Strategy not found in store.", extra={"order_id": order_id, "order": order}
+        )
+        return
 
     stop_orders = store.get_ref_orders(order.id)
     broker = UpstoxBroker(strategy=strategy.name)
 
     if stop_orders is None or len(stop_orders) == 0:
-        return True
+        logger.info("No Stop Orders found for the order.", extra={"order": order})
+        return False
+
+    logger.info(
+        "Stop Orders found",
+        extra={"order_id": order, "order": order, "stop_orders": stop_orders},
+    )
 
     is_stop_executed = False
     for stop_order in stop_orders:
         stop_order_details = broker.order_get(stop_order.broker_id)
 
         if not stop_order_details:
-            raise Exception("Order details not found in broker.", stop_order.broker_id)
+            logger.error("Order details not found in broker.", stop_order.broker_id)
+            continue
 
         if stop_order_details["filled_quantity"] > 0:
             is_stop_executed = True
@@ -252,13 +263,16 @@ def on_entry_signal(signal: SignalEvent):
                 dt=sl_order_details["order_timestamp"],
                 capital_used=0,
                 margin_used=0,
-                is_filled=False,
                 charges=0,
+                ref_id=entry_order.id,
+                is_cancelled=False,
+                is_filled=False,
+                is_active=True,
             )
 
             store.save_order(sl_order)
             logger.info(
-                "[ENTRY] SL Order executed successfully",
+                "[ENTRY] SL Order placed successfully",
                 extra={
                     "entry_order": entry_order,
                     "sl_order": sl_order,
@@ -266,9 +280,52 @@ def on_entry_signal(signal: SignalEvent):
                 },
             )
 
-        # TODO: handle adding TP orders
         if signal.tp:
-            pass
+            logger.info("[ENTRY] SL found, adding stop order", extra={"signal": signal})
+            tp_diff = signal.tp * entry_order.price
+            action = "SELL" if signal.action == "BUY" else "BUY"
+            target_price = entry_order.price + tp_diff
+
+            target_order = broker.order_send_gtt(
+                ticker=signal.ticker,
+                action=action,
+                price=target_price,
+                quantity=signal.quantity,
+                trigger_type="IMMEDIATE",
+            )
+
+            if not target_order:
+                logger.error(
+                    "Target Order Execution failed at broker.",
+                    extra={"signal": signal, "target_order": target_order},
+                )
+                return
+
+            target_order_details = broker.order_get_gtt(order_id=target_order[0])
+
+            target_order = Order(
+                broker_id=target_order[0],
+                strategy_id=strategy.id,
+                ticker=signal.ticker,
+                action=action,
+                type="TP",
+                order_type="GTT",
+                quantity=signal.quantity,
+                price=target_price,
+                dt=target_order_details["order_timestamp"],
+                capital_used=0,
+                margin_used=0,
+                ref_id=entry_order.id,
+                is_cancelled=False,
+                is_filled=False,
+                is_active=True,
+                charges=0,
+            )
+
+            store.save_order(target_order)
+            logger.info(
+                "[ENTRY] Target Order placed successfully",
+            )
 
     except Exception as e:
         logger.error(
@@ -333,7 +390,7 @@ def on_exit_signal(signal: SignalEvent):
                 close_order_id = broker.order_send(
                     ticker=order.ticker,
                     action="SELL" if order.action == "BUY" else "BUY",
-                    order_type=signal.order_type,
+                    order_type="MARKET",
                     quantity=order.quantity,
                 )
 
@@ -342,7 +399,6 @@ def on_exit_signal(signal: SignalEvent):
                         "Order Execution failed at broker.",
                         extra={"open_order": order, "close_order_id": close_order_id},
                     )
-                    continue
 
                 close_order_id = close_order_id[0]
                 order_details = broker.order_get(order_id=close_order_id)
@@ -352,11 +408,28 @@ def on_exit_signal(signal: SignalEvent):
                         "Order details not found in broker.",
                         extra={"close_order_id": close_order_id, "open_order": order},
                     )
-                    continue
 
                 entry_order = Order(
-                    **order.__dict__, exit_quantity=order.quantity, is_active=False
+                    id=order.id,
+                    broker_id=order.broker_id,
+                    strategy_id=order.strategy_id,
+                    dt=str(order.dt.timestamp()),
+                    ticker=order.ticker,
+                    action=order.action,
+                    quantity=order.quantity,
+                    price=order.price,
+                    order_type=order.order_type,
+                    type=order.type,
+                    capital_used=order.capital_used,
+                    margin_used=order.margin_used,
+                    is_filled=order.is_filled,
+                    charges=0,
+                    is_cancelled=False,
+                    is_active=True,
                 )
+
+                entry_order.exit_quantity = order.quantity
+                entry_order.is_active = False
 
                 store.update_order(entry_order)
 
@@ -370,12 +443,14 @@ def on_exit_signal(signal: SignalEvent):
                     quantity=order_details["filled_quantity"],
                     price=order_details["average_price"],
                     dt=order_details["order_timestamp"],
-                    capital_used=order_details["average_price"]
-                    * order_details["quantity"],
-                    margin_used=order_details["average_price"]
-                    * order_details["quantity"],
+                    capital_used=(
+                        order_details["average_price"] * order_details["quantity"]
+                    ),
+                    margin_used=(
+                        order_details["average_price"] * order_details["quantity"]
+                    ),
                     is_filled=True if order_details["filled_quantity"] > 0 else False,
-                    ref_id=order.id,
+                    ref_id=entry_order.id,
                     charges=0,
                 )
 
@@ -390,6 +465,7 @@ def on_exit_signal(signal: SignalEvent):
 
                 store.save_order(close_order)
     except Exception as e:
+        print(e)
         logger.error(
             "Error Processing Exit Signal", extra={"error": str(e), "signal": signal}
         )
@@ -415,6 +491,8 @@ if __name__ == "__main__":
             type="ENTRY",
             order_type="MARKET",
             quantity=1,
+            sl=0.01,
+            tp=0.01,
         ),
     )
 

@@ -338,6 +338,7 @@ class Store:
                         margin_used=order.margin_used,
                         charges=order.charges,
                         ref_id=order.ref_id,
+                        version=1,
                         is_filled=order.is_filled,
                         is_cancelled=order.is_cancelled,
                         is_active=order.is_active,
@@ -349,11 +350,13 @@ class Store:
             raise
 
     def update_order(self, order):
+        if not order.id:
+            raise ValueError("Order ID must be provided")
+
         with engine.begin() as conn:
             try:
                 query_order = orders.select().where(
-                    (orders.c.id == order.order_id)
-                    | (orders.c.broker_id == order.broker_id)
+                    (orders.c.id == order.id) | (orders.c.broker_id == order.broker_id)
                 )
 
                 order_details = conn.execute(query_order).fetchone()
@@ -379,7 +382,7 @@ class Store:
                         margin_used=order.margin_used,
                         is_cancelled=order.is_cancelled,
                         is_active=order.is_active,
-                        version=order_details.version + 1,
+                        version=(order_details.version or 1) + 1,
                         updated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     )
                 )
