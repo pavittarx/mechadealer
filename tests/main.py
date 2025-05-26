@@ -9,8 +9,8 @@ if __name__ == "__main__":
     # You might need to add the parent directory of 'libs' to sys.path
     # if the tests need to import modules from 'libs/*'
     # For example:
-    # project_root = os.path.dirname(tests_dir)
-    # sys.path.insert(0, project_root)
+    project_root = os.path.dirname(tests_dir)
+    sys.path.insert(0, project_root)
     # This allows imports like 'from libs.datastore import ...' if your libs are structured that way
     # and not installed as packages in the environment.
     # However, if 'uv sync' correctly installs all local packages (libs) in editable mode
