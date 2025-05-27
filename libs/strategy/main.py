@@ -5,7 +5,8 @@ from typing import Dict, Literal, Callable, Optional
 from pydantic import BaseModel
 
 from datastore import DataStore
-from kafkalib import Kafka, Timeframe, Signal
+from kafkalib import Kafka, Timeframe, Signal, SignalEvent, Topics
+from storelib import Store, Strategy
 from .data_builder import DataBuilder
 
 StrategyFn = Callable[[DataFrame], Signal | list[Signal]]
@@ -13,6 +14,7 @@ StrategyFn = Callable[[DataFrame], Signal | list[Signal]]
 ds = DataStore()
 kafka = Kafka()
 kafka_app = kafka.get_app()
+store = Store()
 
 
 class StrategyConfig(BaseModel):
@@ -46,6 +48,19 @@ class StrategyBuilder:
         )
 
         self._add_tickers_to_priority()
+
+        strategyConfig = store.get_strategy(strategy_name=name)
+
+        if strategyConfig is None:
+            store.create_strategy(
+                Strategy(
+                    name=name,
+                    description="",
+                    run_tf=run_tf,
+                    capital=0,
+                    capital_remaining=0,
+                )
+            )
 
         if init_data is not None:
             self._validate_init_data(init_data)
@@ -111,7 +126,31 @@ class StrategyBuilder:
                     signals = self.strategy(self.store.get_data(current_tick))
 
                     if signals is None:
-                        print(signals)
+                        print("No Signal")
+
+                    with kafka_app.get_producer() as producer:
+                        if isinstance(signals, Signal):
+                            signals = [signals]
+
+                        for signal in signals:
+                            producer.produce(
+                                topic=Topics.SIGNALS.value.name,
+                                key=current_tick.encode("utf-8"),
+                                value=json.dumps(
+                                    SignalEvent(
+                                        ticker=current_tick,
+                                        strategy=self.config.name,
+                                        quantity=signal.quantity,
+                                        action=signal.action,
+                                        type=signal.type,
+                                        order_type=signal.order_type,
+                                        sl=signal.sl,
+                                        tp=signal.tp,
+                                        limit_price=signal.limit_price,
+                                        position=signal.position,
+                                    ).model_dump()
+                                ).encode("utf-8"),
+                            )
 
 
 if __name__ == "__main__":
