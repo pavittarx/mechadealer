@@ -283,8 +283,7 @@ def trigger_kafka_events(tick: dict[str, str], data):
 
             for tf in timeframe:
                 if time_diff % tf_multiplier[tf] == 0:
-                    topic_name = f"datafeed_{tf}"
-                    topic = app.topic(name=topic_name, value_serializer="json")
+                    topic = Topics["FEED_" + tf].value
 
                     data_tf = data_1M.resample(tf).agg(
                         {
@@ -351,3 +350,5 @@ if __name__ == "__main__":
             )
         ],
     )
+
+    # fetch_priority_tickers()
