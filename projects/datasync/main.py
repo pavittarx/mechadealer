@@ -6,12 +6,24 @@ from prefect import flow, task
 from prefect.schedules import RRule
 
 from sources.upstox import UpstoxClient
-from datastore import Database
+from datastore import Database, DataStore
 from kafkalib import Kafka, Topics
 
 load_dotenv()
 db = Database()
+ds = DataStore()
 client = UpstoxClient()
+
+tf_multiplier = {
+    "2M": 2,
+    "3M": 3,
+    "5M": 5,
+    "10M": 10,
+    "15M": 15,
+    "30M": 30,
+    "1H": 60,
+    "4H": 240,
+}
 
 
 @task
@@ -256,11 +268,62 @@ def trigger_kafka_events(tick: dict[str, str], data):
         )
 
         # TODO: Time based Construct send data at specified intervals
+        data_1M = ds.get_historic_data(
+            ticker=message["ticker"],
+            freq="1M",
+        )
+
+        if data_1M is not None:
+            data_1M = pd.concat([data_1M, pd.DataFrame([message])], ignore_index=True)
+
+            timeframe = ["2M", "3M", "5M", "10M", "15M", "30M", "1H", "4H", "1D"]
+            now = datetime.now()
+            start_of_market = now.replace(hour=9, minute=15, second=0, microsecond=0)
+            time_diff = (now - start_of_market).total_seconds() / 60
+
+            for tf in timeframe:
+                if time_diff % tf_multiplier[tf] == 0:
+                    topic_name = f"datafeed_{tf}"
+                    topic = app.topic(name=topic_name, value_serializer="json")
+
+                    data_tf = data_1M.resample(tf).agg(
+                        {
+                            "open": "first",
+                            "high": "max",
+                            "low": "min",
+                            "close": "last",
+                            "volume": "sum",
+                            "oi": "last",
+                        }
+                    )
+
+                    row = data_tf.iloc[-1:]
+                    message_tf = {
+                        "ticker": data_tf["ticker"],
+                        "ts": row["ts"],
+                        "open": float(row["open"].iloc[0]),
+                        "high": float(row["high"].iloc[0]),
+                        "low": float(row["low"].iloc[0]),
+                        "close": float(row["close"].iloc[0]),
+                        "volume": int(row["volume"].iloc[0]),
+                        "oi": float(row["oi"].iloc[0]),
+                    }
+
+                    kafka_msg_tf = topic.serialize(
+                        key=message_tf["ticker"], value=message_tf
+                    )
+
+                    producer.produce(
+                        topic=topic.name,
+                        key=kafka_msg_tf.key,
+                        value=kafka_msg_tf.value,
+                    )
 
 
 @flow
 def fetch_priority_tickers():
     tickers = get_priority_tickers_list()
+
     for tick in tickers:
         data = fetch_data(tick)
         trigger_kafka_events(tick, data)
@@ -288,5 +351,3 @@ if __name__ == "__main__":
             )
         ],
     )
-
-    # fetch_priority_tickers()
