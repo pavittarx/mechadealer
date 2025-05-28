@@ -75,12 +75,14 @@ source = { virtual = "projects/app_server" }
 dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "pyjwt" },
+    { name = "storelib" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
     { name = "pyjwt", specifier = ">=2.10.1" },
+    { name = "storelib", editable = "libs/storelib" },
 ]
 
 [[package]]

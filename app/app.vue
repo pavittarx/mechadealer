@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
 // Pages will be automatically routed by Nuxt
 // when <NuxtPage /> is used.
@@ -5,7 +6,9 @@
 
 <template>
   <div>
-    <NuxtRouteAnnouncer />
-    <NuxtPage />
+    <NuxtLayout>
+      <NuxtRouteAnnouncer />
+      <NuxtPage />
+    </NuxtLayout>
   </div>
 </template>
