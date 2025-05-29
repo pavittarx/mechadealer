@@ -1,7 +1,7 @@
 <template>
   <div class="login-page-wrapper">
     <div class="login-container">
-      <img src="/" alt="Mechadealer Logo" class="logo" />
+      <img src="/mechadealer_logo.png" alt="Mechadealer Logo" class="logo">
       <h1>Member Login</h1>
       <p class="subtitle">Access your Mechadealer account</p>
       <form @submit.prevent="handleLogin" class="login-form">
