@@ -1,3 +1,5 @@
+import { fileURLToPath, URL } from "node:url";
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-05-15",
@@ -21,7 +23,6 @@ export default defineNuxtConfig({
       baseUrl: "http://localhost:8000",
     },
   },
-
   security: {
     corsHandler: {
       origin: ["http://localhost:3000", "http://localhost:8000"],
@@ -34,5 +35,11 @@ export default defineNuxtConfig({
         statusCode: 204,
       },
     },
+  },
+  alias: {
+    "@": fileURLToPath(new URL(".", import.meta.url)),
+  },
+  imports: {
+    dirs: ["store", "composables"],
   },
 });

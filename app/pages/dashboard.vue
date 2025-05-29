@@ -51,7 +51,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useUserStore } from "@/store";
 
 // --- Mock Data ---
 // In a real application, this data would be fetched from an API
@@ -94,7 +95,23 @@ const holdingsData = ref([
     type: 'Long/Short Tech Sector'
   }
 ]);
+
 // --- End Mock Data ---
+
+const userStore = useUserStore();
+const router = useRouter();
+
+onMounted(async () => {
+  console.log("Mounted");
+
+  if (!userStore.state?.token) {
+    router.push('/login');
+  }
+
+  console.log(userStore.state)
+
+})
+
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
@@ -106,20 +123,7 @@ const pnlClass = (pnl: number) => {
   return 'pnl-neutral';
 };
 
-// Example: Fetch data on component mount
-// onMounted(async () => {
-//   try {
-//     // const userRes = await $fetch('/api/user-details');
-//     // userData.value = userRes;
-//     // const capitalRes = await $fetch('/api/capital-summary');
-//     // capitalData.value = capitalRes;
-//     // const holdingsRes = await $fetch('/api/holdings');
-//     // holdingsData.value = holdingsRes;
-//   } catch (error) {
-//     console.error("Failed to fetch dashboard data:", error);
-//     // Handle error display to user
-//   }
-// });
+
 
 definePageMeta({
   layout: 'default'
