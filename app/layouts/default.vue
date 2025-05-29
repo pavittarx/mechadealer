@@ -1,6 +1,6 @@
 <template>
-  <div class="app-layout">
-    <aside class="sidebar">
+  <div :class="layoutCls">
+    <aside v-if="showSidebar" class="sidebar">
       <nav class="sidebar-nav">
         <NuxtLink to="/dashboard" class="nav-item" active-class="nav-item-active">
           <Icon name="mdi:view-dashboard-outline" class="icon" /> Dashboard
@@ -29,7 +29,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+
+const noSidebarRoutes = ['/', '/login'];
+
+const showSidebar = computed(() => {
+  return !noSidebarRoutes.includes(route.path);
+});
+
+const layoutCls = computed(() => {
+  return {
+    'app-layout': true,
+    'no-sidebar-layout': !showSidebar.value
+  };
+});
+
 // This is a placeholder. In a real app, you'd fetch this from a store or API.
 // For now, we'll use a simplified version of what might be on the dashboard.
 const investedStrategies = ref([
@@ -55,6 +72,11 @@ const investedStrategies = ref([
   min-height: 100vh;
   background-color: #f0f2f5;
   font-family: 'Roboto', 'Arial', sans-serif;
+}
+
+.app-layout.no-sidebar-layout .main-content {
+  margin-left: 0;
+  width: 100%; /* Ensure main content takes full width */
 }
 
 .sidebar {
