@@ -2,6 +2,7 @@
 dependencies = [
   "asyncio>=3.4.3",
   "asyncpg>=0.30.0",
+  "coreutils",
   "datastore",
   "kafkalib>=0.1.1",
   "pandas>=2.2.3",
@@ -22,3 +23,4 @@ version = "0.1.0"
 
 [tool.uv.sources]
 datastore = { workspace = true }
+coreutils = { workspace = true }

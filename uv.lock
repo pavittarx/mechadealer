@@ -476,6 +476,7 @@ source = { virtual = "projects/datasync" }
 dependencies = [
     { name = "asyncio" },
     { name = "asyncpg" },
+    { name = "coreutils" },
     { name = "datastore" },
     { name = "kafkalib" },
     { name = "pandas" },
@@ -493,6 +494,7 @@ dependencies = [
 requires-dist = [
     { name = "asyncio", specifier = ">=3.4.3" },
     { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "coreutils", editable = "libs/coreutils" },
     { name = "datastore", editable = "libs/datastore" },
     { name = "kafkalib", editable = "libs/kafkalib" },
     { name = "pandas", specifier = ">=2.2.3" },

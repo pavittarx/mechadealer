@@ -10,6 +10,10 @@ from prefect.schedules import RRule
 from sources.upstox import UpstoxClient
 from datastore import Database, DataStore
 from kafkalib import Kafka, Topics
+from coreutils import Logger
+
+log = Logger("datasync")
+logger = log.get_logger()
 
 load_dotenv()
 db = Database()
@@ -141,7 +145,7 @@ def save_data(ticker, data):
             at="ts",
         )
 
-    print("Data Ingested for Ticker", ticker["query_key"])
+    logger.info("Data Ingested for Ticker", ticker["query_key"])
 
 
 @task
@@ -188,13 +192,13 @@ def sync_instruments():
             cursor.execute("SELECT query_key FROM symbols")
             existing_keys = {row[0] for row in cursor.fetchall()}
         except Exception as e:
-            print(f"Error fetching existing keys: {e}")
+            logger.error(f"Error fetching existing keys: {e}")
 
         # Filter out existing records
     df = df[~df["query_key"].isin(existing_keys)]
 
     if df.empty:
-        print("No new instruments to add")
+        logger.info("No new instruments to add")
         return 0
 
     # Insert new records in batches
@@ -247,18 +251,20 @@ def sync_instruments():
             try:
                 cursor.executemany(query, batch)
                 inserted_count += len(batch)
-                print(
+                logger.info(
                     f"Inserted batch {i // batch_size + 1}/{(len(values) + batch_size - 1) // batch_size}"
                 )
             except Exception as e:
-                print(f"Error inserting batch: {e}")
+                logger.error(f"Error inserting batch: {e}")
 
-    print(f"Successfully added {inserted_count} new instruments")
+    logger.info(f"Successfully added {inserted_count} new instruments")
     return inserted_count
 
 
 @task
 def trigger_kafka_events(tick: dict[str, str], data):
+    logger.info("Init: Kafka Events Trigger")
+
     k = Kafka()
     app = k.get_app()
 
@@ -291,6 +297,8 @@ def trigger_kafka_events(tick: dict[str, str], data):
             freq="1M",
         )
 
+        logger.info("Producing 1M data for ticker: %s", tick["query_key"])
+
         if data_1M is not None:
             df = pd.DataFrame([message])
             df.set_index("ts", inplace=True)
@@ -319,8 +327,6 @@ def trigger_kafka_events(tick: dict[str, str], data):
 
                     row = data_tf.iloc[-1]
 
-                    print("IDX", tf, data_tf.tail(5))
-
                     ts = (
                         row.name
                         if isinstance(row.name, pd.Timestamp)
@@ -346,29 +352,39 @@ def trigger_kafka_events(tick: dict[str, str], data):
                         value=message_tf,
                     )
 
-                    print("Message Produced", kafka_msg.value)
+                    logger.info(
+                        f"Data for {tf} timeframe produced for {tick['query_key']}"
+                    )
 
 
 @flow
 def fetch_priority_tickers():
     tickers = get_priority_tickers_list()
+    logger.info("Priority Tickers Fetched: %s", len(tickers))
 
     for tick in tickers:
         data = fetch_data(tick)
+        logger.info("Data fetched for ticker: %s", tick["query_key"])
         trigger_kafka_events(tick, data)
+        logger.info("Events produced for ticker: %s", tick["query_key"])
         save_data(tick, data)
+        logger.info("Data ingested for ticker: %s", tick["query_key"])
 
 
 @flow
 def fetch_non_priority_tickers():
+    logger.info("Fetching Non-Priority Tickers")
     tickers = get_non_priority_tickers_list()
     for tick in tickers:
         data = fetch_data(tick)
+        logger.info("Data fetched for ticker: %s", tick["query_key"])
         save_data(tick, data)
+        logger.info("Data ingested for ticker: %s", tick["query_key"])
 
 
 if __name__ == "__main__":
     sync_instruments()
+    logger.info("Instrumenst Synced Successfully")
 
     fetch_priority_tickers.serve(
         name="fetch-priority-tickers",
