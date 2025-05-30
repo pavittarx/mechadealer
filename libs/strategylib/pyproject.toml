@@ -1,0 +1,22 @@
+[project]
+name = "strategylib"
+version = "0.1.5"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["datastore", "kafkalib>=0.1.2", "storelib"]
+
+[tool.uv.sources]
+datastore = { workspace = true }
+storelib = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+sources = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["__init__.py"]
+force-include = { "." = "strategylib" }

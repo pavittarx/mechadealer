@@ -8,6 +8,7 @@ dependencies = [
   "pydantic>=2.10.6",
   "python-dotenv>=1.1.0",
   "storelib",
+  "strategylib",
 ]
 description = "Add your description here"
 name = "mechadealer"
@@ -19,9 +20,9 @@ version = "0.1.0"
 members = [
   "projects/*",
   "libs/datastore",
-  "libs/strategy",
   "libs/storelib",
   "libs/coreutils",
+  "libs/strategylib",
 ]
 
 [tool.uv.sources]
@@ -29,6 +30,7 @@ datastore = { workspace = true }
 kafkalib = { path = "libs/kafkalib", editable = true }
 storelib = { workspace = true }
 coreutils = { workspace = true }
+strategylib = { workspace = true }
 
 [dependency-groups]
 dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]

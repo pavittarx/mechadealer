@@ -9,7 +9,7 @@ from kafkalib import Kafka, Timeframe, Signal, SignalEvent, Topics
 from storelib import Store, Strategy
 from .data_builder import DataBuilder
 
-StrategyFn = Callable[[DataFrame], Signal | list[Signal]]
+StrategyFn = Callable[[DataFrame], Signal | list[Signal] | None]
 
 ds = DataStore()
 kafka = Kafka()
@@ -21,7 +21,7 @@ class StrategyConfig(BaseModel):
     name: str
     tickers: str | list[str]
     run_tf: Timeframe
-    broker: Literal["upstox"]
+    broker: Literal["UPSTOX"]
     init_data: Optional[DataFrame] = None
 
 
@@ -31,7 +31,7 @@ class StrategyBuilder:
         name: str,
         tickers: str | list[str],
         run_tf: Timeframe,
-        broker: Literal["upstox"],
+        broker: Literal["UPSTOX"],
         strategy: StrategyFn,
         init_data: Optional[DataFrame | Dict[str, DataFrame]] = None,
     ):
@@ -127,6 +127,7 @@ class StrategyBuilder:
 
                     if signals is None:
                         print("No Signal")
+                        continue
 
                     with kafka_app.get_producer() as producer:
                         if isinstance(signals, Signal):
@@ -171,5 +172,5 @@ if __name__ == "__main__":
         tickers="TATASTEEL.NSE",
         run_tf="1M",
         strategy=strategyFn,
-        broker="upstox",
+        broker="UPSTOX",
     )

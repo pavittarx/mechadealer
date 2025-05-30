@@ -1,14 +1,13 @@
 [project]
-name = "app-server"
+name = "strategy-0"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi[standard]>=0.115.12",
-    "pyjwt>=2.10.1",
-    "storelib",
+    "pandas>=2.2.3",
+    "strategylib",
 ]
 
 [tool.uv.sources]
-storelib = { workspace = true }
+strategylib = { workspace = true }

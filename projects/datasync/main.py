@@ -1,3 +1,5 @@
+import pytz
+import json
 import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
@@ -8,13 +10,20 @@ from prefect.schedules import RRule
 from sources.upstox import UpstoxClient
 from datastore import Database, DataStore
 from kafkalib import Kafka, Topics
+from coreutils import Logger
+
+log = Logger("datasync")
+logger = log.get_logger()
 
 load_dotenv()
 db = Database()
 ds = DataStore()
 client = UpstoxClient()
 
+local_tz = pytz.timezone("Asia/Kolkata")
+
 tf_multiplier = {
+    "1M": 1,
     "2M": 2,
     "3M": 3,
     "5M": 5,
@@ -23,6 +32,19 @@ tf_multiplier = {
     "30M": 30,
     "1H": 60,
     "4H": 240,
+}
+
+resample_freq = {
+    "1M": "1T",
+    "2M": "2T",
+    "3M": "3T",
+    "5M": "5T",
+    "10M": "10T",
+    "15M": "15T",
+    "30M": "30T",
+    "1H": "1H",
+    "4H": "4H",
+    "1D": "1D",
 }
 
 
@@ -123,7 +145,7 @@ def save_data(ticker, data):
             at="ts",
         )
 
-    print("Data Ingested for Ticker", ticker["query_key"])
+    logger.info("Data Ingested for Ticker", ticker["query_key"])
 
 
 @task
@@ -170,13 +192,13 @@ def sync_instruments():
             cursor.execute("SELECT query_key FROM symbols")
             existing_keys = {row[0] for row in cursor.fetchall()}
         except Exception as e:
-            print(f"Error fetching existing keys: {e}")
+            logger.error(f"Error fetching existing keys: {e}")
 
         # Filter out existing records
     df = df[~df["query_key"].isin(existing_keys)]
 
     if df.empty:
-        print("No new instruments to add")
+        logger.info("No new instruments to add")
         return 0
 
     # Insert new records in batches
@@ -229,18 +251,20 @@ def sync_instruments():
             try:
                 cursor.executemany(query, batch)
                 inserted_count += len(batch)
-                print(
+                logger.info(
                     f"Inserted batch {i // batch_size + 1}/{(len(values) + batch_size - 1) // batch_size}"
                 )
             except Exception as e:
-                print(f"Error inserting batch: {e}")
+                logger.error(f"Error inserting batch: {e}")
 
-    print(f"Successfully added {inserted_count} new instruments")
+    logger.info(f"Successfully added {inserted_count} new instruments")
     return inserted_count
 
 
 @task
 def trigger_kafka_events(tick: dict[str, str], data):
+    logger.info("Init: Kafka Events Trigger")
+
     k = Kafka()
     app = k.get_app()
 
@@ -267,26 +291,30 @@ def trigger_kafka_events(tick: dict[str, str], data):
             value=kafka_msg.value,
         )
 
-        # TODO: Time based Construct send data at specified intervals
+        message["ts"] = datetime.fromisoformat(message["ts"]).astimezone(local_tz)
         data_1M = ds.get_historic_data(
             ticker=message["ticker"],
             freq="1M",
         )
 
-        if data_1M is not None:
-            data_1M = pd.concat([data_1M, pd.DataFrame([message])], ignore_index=True)
+        logger.info("Producing 1M data for ticker: %s", tick["query_key"])
 
-            timeframe = ["2M", "3M", "5M", "10M", "15M", "30M", "1H", "4H", "1D"]
+        if data_1M is not None:
+            df = pd.DataFrame([message])
+            df.set_index("ts", inplace=True)
+            data_1M = pd.concat([data_1M, df])
+            data_1M = data_1M.sort_index()
+
+            timeframe = ["2M", "3M", "5M", "10M", "15M", "30M", "1H", "4H"]
             now = datetime.now()
             start_of_market = now.replace(hour=9, minute=15, second=0, microsecond=0)
             time_diff = (now - start_of_market).total_seconds() / 60
 
             for tf in timeframe:
-                if time_diff % tf_multiplier[tf] == 0:
-                    topic_name = f"datafeed_{tf}"
-                    topic = app.topic(name=topic_name, value_serializer="json")
-
-                    data_tf = data_1M.resample(tf).agg(
+                if int(time_diff % tf_multiplier[tf]) == 0:
+                    topic = Topics["FEED_" + tf].value
+                    freq = resample_freq[tf]
+                    data_tf = data_1M.resample(freq).agg(
                         {
                             "open": "first",
                             "high": "max",
@@ -297,49 +325,66 @@ def trigger_kafka_events(tick: dict[str, str], data):
                         }
                     )
 
-                    row = data_tf.iloc[-1:]
+                    row = data_tf.iloc[-1]
+
+                    ts = (
+                        row.name
+                        if isinstance(row.name, pd.Timestamp)
+                        else pd.Timestamp(row.name)
+                    )
+
                     message_tf = {
-                        "ticker": data_tf["ticker"],
-                        "ts": row["ts"],
-                        "open": float(row["open"].iloc[0]),
-                        "high": float(row["high"].iloc[0]),
-                        "low": float(row["low"].iloc[0]),
-                        "close": float(row["close"].iloc[0]),
-                        "volume": int(row["volume"].iloc[0]),
-                        "oi": float(row["oi"].iloc[0]),
+                        "ticker": tick,
+                        "ts": ts.isoformat(),
+                        "open": float(row["open"]),
+                        "high": float(row["high"]),
+                        "low": float(row["low"]),
+                        "close": float(row["close"]),
+                        "volume": int(row["volume"]),
+                        "oi": int(row["oi"]),
                     }
 
-                    kafka_msg_tf = topic.serialize(
-                        key=message_tf["ticker"], value=message_tf
-                    )
+                    message_tf = json.dumps(message_tf).encode("utf-8")
 
                     producer.produce(
                         topic=topic.name,
-                        key=kafka_msg_tf.key,
-                        value=kafka_msg_tf.value,
+                        key=kafka_msg.key,
+                        value=message_tf,
+                    )
+
+                    logger.info(
+                        f"Data for {tf} timeframe produced for {tick['query_key']}"
                     )
 
 
 @flow
 def fetch_priority_tickers():
     tickers = get_priority_tickers_list()
+    logger.info("Priority Tickers Fetched: %s", len(tickers))
 
     for tick in tickers:
         data = fetch_data(tick)
+        logger.info("Data fetched for ticker: %s", tick["query_key"])
         trigger_kafka_events(tick, data)
+        logger.info("Events produced for ticker: %s", tick["query_key"])
         save_data(tick, data)
+        logger.info("Data ingested for ticker: %s", tick["query_key"])
 
 
 @flow
 def fetch_non_priority_tickers():
+    logger.info("Fetching Non-Priority Tickers")
     tickers = get_non_priority_tickers_list()
     for tick in tickers:
         data = fetch_data(tick)
+        logger.info("Data fetched for ticker: %s", tick["query_key"])
         save_data(tick, data)
+        logger.info("Data ingested for ticker: %s", tick["query_key"])
 
 
 if __name__ == "__main__":
     sync_instruments()
+    logger.info("Instrumenst Synced Successfully")
 
     fetch_priority_tickers.serve(
         name="fetch-priority-tickers",
@@ -351,3 +396,5 @@ if __name__ == "__main__":
             )
         ],
     )
+
+    # fetch_priority_tickers()

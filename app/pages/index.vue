@@ -1,7 +1,7 @@
-<template>
+s<template>
   <div class="landing-container">
     <header class="hero-section">
-      <img src="/" alt="Mechadealer Logo" class="logo" />
+      <img src="/mechadealer_logo.png" alt="Mechadealer Logo" class="logo" />
       <h1>Welcome to Mechadealer</h1>
       <p class="subtitle">Empowering Retail Investors with Automated Trading Strategies</p>
       <NuxtLink to="/login" class="cta-button">Login to Access Strategies</NuxtLink>
@@ -25,7 +25,7 @@
           <h3>Real-Time Monitoring</h3>
           <p>Monitor your investments and adjust your portfolio in real-time.</p>
         </div>
-         <div class="feature-item">
+        <div class="feature-item">
           <Icon name="uil:shield-check" class="feature-icon" />
           <h3>Secure Platform</h3>
           <p>Invest with confidence on our secure and reliable trading platform.</p>
@@ -83,7 +83,8 @@
 }
 
 .hero-section {
-  background: linear-gradient(135deg, #1A237E 0%, #283593 50%, #3949AB 100%); /* Deep Indigo to Indigo */
+  background: linear-gradient(135deg, #1A237E 0%, #283593 50%, #3949AB 100%);
+  /* Deep Indigo to Indigo */
   color: white;
   padding: 80px 20px;
   text-align: center;
@@ -108,7 +109,8 @@
 }
 
 .cta-button {
-  background-color: #FFC107; /* Amber */
+  background-color: #FFC107;
+  /* Amber */
   color: #333;
   padding: 15px 35px;
   text-decoration: none;
@@ -116,11 +118,12 @@
   font-size: 1.1em;
   font-weight: bold;
   transition: background-color 0.3s ease, transform 0.2s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .cta-button:hover {
-  background-color: #FFB300; /* Darker Amber */
+  background-color: #FFB300;
+  /* Darker Amber */
   transform: translateY(-2px);
 }
 
@@ -133,7 +136,8 @@
 .features-section h2 {
   font-size: 2.2em;
   margin-bottom: 50px;
-  color: #1A237E; /* Deep Indigo */
+  color: #1A237E;
+  /* Deep Indigo */
   font-weight: 600;
 }
 
@@ -149,7 +153,7 @@
   background-color: #ffffff;
   padding: 30px;
   border-radius: 10px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
   transition: transform 0.3s ease;
 }
 
@@ -159,7 +163,8 @@
 
 .feature-icon {
   font-size: 3.5em;
-  color: #3949AB; /* Indigo */
+  color: #3949AB;
+  /* Indigo */
   margin-bottom: 20px;
 }
 
@@ -183,7 +188,8 @@
 .how-it-works-section h2 {
   font-size: 2.2em;
   margin-bottom: 50px;
-  color: #1A237E; /* Deep Indigo */
+  color: #1A237E;
+  /* Deep Indigo */
   font-weight: 600;
 }
 
@@ -207,7 +213,8 @@
   height: 50px;
   line-height: 50px;
   border-radius: 50%;
-  background-color: #FFC107; /* Amber */
+  background-color: #FFC107;
+  /* Amber */
   color: #333;
   font-size: 1.5em;
   font-weight: bold;
@@ -227,22 +234,26 @@
 }
 
 .footer-section {
-  background-color: #263238; /* Blue Grey Darken-3 */
-  color: #CFD8DC; /* Blue Grey Lighten-4 */
+  background-color: #263238;
+  /* Blue Grey Darken-3 */
+  color: #CFD8DC;
+  /* Blue Grey Lighten-4 */
   text-align: center;
   padding: 30px 20px;
   font-size: 0.9em;
 }
 
 .footer-section nav a {
-  color: #FFC107; /* Amber */
+  color: #FFC107;
+  /* Amber */
   margin: 0 15px;
   text-decoration: none;
   transition: color 0.3s ease;
 }
 
 .footer-section nav a:hover {
-  color: #FFA000; /* Darker Amber */
+  color: #FFA000;
+  /* Darker Amber */
   text-decoration: underline;
 }
 
@@ -251,12 +262,15 @@
   .hero-section h1 {
     font-size: 2.5em;
   }
+
   .subtitle {
     font-size: 1.1em;
   }
+
   .features-grid {
     grid-template-columns: 1fr;
   }
+
   .step-item {
     flex-basis: calc(50% - 20px);
   }

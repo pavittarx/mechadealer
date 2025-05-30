@@ -1,7 +1,7 @@
 <template>
   <div class="login-page-wrapper">
     <div class="login-container">
-      <img src="/" alt="Mechadealer Logo" class="logo" />
+      <img src="/mechadealer_logo.png" alt="Mechadealer Logo" class="logo">
       <h1>Member Login</h1>
       <p class="subtitle">Access your Mechadealer account</p>
       <form @submit.prevent="handleLogin" class="login-form">
@@ -30,11 +30,28 @@ import { ref } from 'vue';
 
 const username = ref('');
 const password = ref('');
+const error = ref('');
 
-const handleLogin = () => {
-  // Handle login logic here
-  console.log('Logging in with:', username.value, password.value);
-  // Example: You might want to call an API, validate credentials, and then navigate
+const handleLogin = async () => {
+  const runtimeConfig = useRuntimeConfig()
+  const url = runtimeConfig.public.baseUrl + '/login';
+
+  try {
+    const res = await $fetch(url, {
+      method: 'POST',
+      body: {
+        username: username.value,
+        password: password.value
+      }
+    })
+
+    console.log(res)
+  }
+  catch (error) {
+    console.log("Error while logging in.");
+    console.error(error);
+  }
+
 };
 </script>
 
@@ -44,7 +61,8 @@ const handleLogin = () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1A237E 0%, #283593 50%, #3949AB 100%); /* Deep Indigo to Indigo */
+  background: linear-gradient(135deg, #1A237E 0%, #283593 50%, #3949AB 100%);
+  /* Deep Indigo to Indigo */
   padding: 20px;
   font-family: 'Roboto', 'Arial', sans-serif;
 }
@@ -66,7 +84,8 @@ const handleLogin = () => {
 
 .login-container h1 {
   font-size: 2em;
-  color: #1A237E; /* Deep Indigo */
+  color: #1A237E;
+  /* Deep Indigo */
   margin-bottom: 10px;
   font-weight: 600;
 }
@@ -104,7 +123,8 @@ const handleLogin = () => {
 }
 
 .form-group input:focus {
-  border-color: #3949AB; /* Indigo */
+  border-color: #3949AB;
+  /* Indigo */
   outline: none;
   box-shadow: 0 0 0 2px rgba(57, 73, 171, 0.2);
 }
@@ -119,7 +139,8 @@ const handleLogin = () => {
 
 .forgot-password-link {
   font-size: 0.9em;
-  color: #3949AB; /* Indigo */
+  color: #3949AB;
+  /* Indigo */
   text-decoration: none;
 }
 
@@ -128,7 +149,8 @@ const handleLogin = () => {
 }
 
 .login-button {
-  background-color: #FFC107; /* Amber */
+  background-color: #FFC107;
+  /* Amber */
   color: #333;
   padding: 12px 25px;
   border: none;
@@ -140,7 +162,8 @@ const handleLogin = () => {
 }
 
 .login-button:hover {
-  background-color: #FFB300; /* Darker Amber */
+  background-color: #FFB300;
+  /* Darker Amber */
   transform: translateY(-1px);
 }
 
@@ -151,7 +174,8 @@ const handleLogin = () => {
 }
 
 .signup-link a {
-  color: #FFC107; /* Amber */
+  color: #FFC107;
+  /* Amber */
   font-weight: bold;
   text-decoration: none;
 }
