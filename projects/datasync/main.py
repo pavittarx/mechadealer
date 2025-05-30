@@ -1,3 +1,5 @@
+import pytz
+import json
 import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
@@ -14,7 +16,10 @@ db = Database()
 ds = DataStore()
 client = UpstoxClient()
 
+local_tz = pytz.timezone("Asia/Kolkata")
+
 tf_multiplier = {
+    "1M": 1,
     "2M": 2,
     "3M": 3,
     "5M": 5,
@@ -23,6 +28,19 @@ tf_multiplier = {
     "30M": 30,
     "1H": 60,
     "4H": 240,
+}
+
+resample_freq = {
+    "1M": "1T",
+    "2M": "2T",
+    "3M": "3T",
+    "5M": "5T",
+    "10M": "10T",
+    "15M": "15T",
+    "30M": "30T",
+    "1H": "1H",
+    "4H": "4H",
+    "1D": "1D",
 }
 
 
@@ -267,25 +285,28 @@ def trigger_kafka_events(tick: dict[str, str], data):
             value=kafka_msg.value,
         )
 
-        # TODO: Time based Construct send data at specified intervals
+        message["ts"] = datetime.fromisoformat(message["ts"]).astimezone(local_tz)
         data_1M = ds.get_historic_data(
             ticker=message["ticker"],
             freq="1M",
         )
 
         if data_1M is not None:
-            data_1M = pd.concat([data_1M, pd.DataFrame([message])], ignore_index=True)
+            df = pd.DataFrame([message])
+            df.set_index("ts", inplace=True)
+            data_1M = pd.concat([data_1M, df])
+            data_1M = data_1M.sort_index()
 
-            timeframe = ["2M", "3M", "5M", "10M", "15M", "30M", "1H", "4H", "1D"]
+            timeframe = ["2M", "3M", "5M", "10M", "15M", "30M", "1H", "4H"]
             now = datetime.now()
             start_of_market = now.replace(hour=9, minute=15, second=0, microsecond=0)
             time_diff = (now - start_of_market).total_seconds() / 60
 
             for tf in timeframe:
-                if time_diff % tf_multiplier[tf] == 0:
+                if int(time_diff % tf_multiplier[tf]) == 0:
                     topic = Topics["FEED_" + tf].value
-
-                    data_tf = data_1M.resample(tf).agg(
+                    freq = resample_freq[tf]
+                    data_tf = data_1M.resample(freq).agg(
                         {
                             "open": "first",
                             "high": "max",
@@ -296,27 +317,36 @@ def trigger_kafka_events(tick: dict[str, str], data):
                         }
                     )
 
-                    row = data_tf.iloc[-1:]
+                    row = data_tf.iloc[-1]
+
+                    print("IDX", tf, data_tf.tail(5))
+
+                    ts = (
+                        row.name
+                        if isinstance(row.name, pd.Timestamp)
+                        else pd.Timestamp(row.name)
+                    )
+
                     message_tf = {
-                        "ticker": data_tf["ticker"],
-                        "ts": row["ts"],
-                        "open": float(row["open"].iloc[0]),
-                        "high": float(row["high"].iloc[0]),
-                        "low": float(row["low"].iloc[0]),
-                        "close": float(row["close"].iloc[0]),
-                        "volume": int(row["volume"].iloc[0]),
-                        "oi": float(row["oi"].iloc[0]),
+                        "ticker": tick,
+                        "ts": ts.isoformat(),
+                        "open": float(row["open"]),
+                        "high": float(row["high"]),
+                        "low": float(row["low"]),
+                        "close": float(row["close"]),
+                        "volume": int(row["volume"]),
+                        "oi": int(row["oi"]),
                     }
 
-                    kafka_msg_tf = topic.serialize(
-                        key=message_tf["ticker"], value=message_tf
-                    )
+                    message_tf = json.dumps(message_tf).encode("utf-8")
 
                     producer.produce(
                         topic=topic.name,
-                        key=kafka_msg_tf.key,
-                        value=kafka_msg_tf.value,
+                        key=kafka_msg.key,
+                        value=message_tf,
                     )
+
+                    print("Message Produced", kafka_msg.value)
 
 
 @flow

@@ -1,6 +1,8 @@
+import pytz
 import pandas as pd
 from typing import Literal
 from db import Database
+from datetime import timezone
 
 freq_map = {
     "1M": "1T",  # 1 minute
@@ -34,6 +36,7 @@ class DataStore:
         freq: Literal["1M", "2M", "5M", "10M", "15M", "30M", "1H", "2H", "4H", "1D"],
         start_date: str | None = None,
         end_date: str | None = None,
+        tz: str = "Asia/Kolkata",
     ):
         query_chunks = ["SELECT * FROM market_data WHERE ticker = %s"]
         params = [ticker]
@@ -72,6 +75,7 @@ class DataStore:
                     ],
                 )
 
+                df["ts"] = pd.to_datetime(df["ts"], utc=True).dt.tz_convert(tz)
                 df.set_index("ts", inplace=True)
 
                 if freq != "1M":

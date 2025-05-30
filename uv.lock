@@ -452,7 +452,7 @@ wheels = [
 
 [[package]]
 name = "datastore"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "libs/datastore" }
 dependencies = [
     { name = "pandas" },
@@ -937,7 +937,7 @@ wheels = [
 
 [[package]]
 name = "kafkalib"
-version = "0.3.4"
+version = "0.3.5"
 source = { editable = "libs/kafkalib" }
 dependencies = [
     { name = "pydantic" },
