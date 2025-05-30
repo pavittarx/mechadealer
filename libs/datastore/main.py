@@ -1,4 +1,3 @@
-import pytz
 import pandas as pd
 from typing import Literal
 from db import Database
