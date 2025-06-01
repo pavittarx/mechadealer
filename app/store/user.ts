@@ -1,14 +1,18 @@
 export const useUserStore = defineStore("userStore", {
   state: () => ({
-    id: -1,
+    userId: -1,
     token: "",
   }),
   actions: {
     setUserId(userId: number) {
-      this.id = userId;
+      this.userId = userId;
     },
     setToken(token: string) {
       this.token = token;
     },
+  },
+  persist: {
+    storage: process.client && localStorage ? localStorage : undefined,
+    pick: ["userId", "token"],
   },
 });

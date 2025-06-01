@@ -17,6 +17,7 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     "nuxt-security",
     "@pinia/nuxt",
+    "pinia-plugin-persistedstate/nuxt",
   ],
   runtimeConfig: {
     public: {
