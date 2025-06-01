@@ -32,12 +32,22 @@ const username = ref('');
 const password = ref('');
 const error = ref('');
 
+type LoginRespose = {
+  is_error: boolean;
+  is_success: boolean;
+  message: string;
+  data: {
+    user_id: number;
+    token: string;
+  }
+}
+
 const handleLogin = async () => {
   const runtimeConfig = useRuntimeConfig()
   const url = runtimeConfig.public.baseUrl + '/login';
 
   try {
-    const res = await $fetch(url, {
+    const res: LoginRespose = await $fetch(url, {
       method: 'POST',
       body: {
         username: username.value,
@@ -45,7 +55,17 @@ const handleLogin = async () => {
       }
     })
 
-    console.log(res)
+    if (res.is_error) {
+      error.value = res.message;
+    }
+
+    const userStore = useUserStore();
+
+    userStore.setUserId(res.data.user_id);
+    userStore.setToken(res.data.token);
+
+    console.log('Login Succeessful')
+    navigateTo('/dashboard');
   }
   catch (error) {
     console.log("Error while logging in.");

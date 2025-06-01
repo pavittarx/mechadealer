@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useUserStore } from "@/store";
+import { useUserStore } from "@/store/user";
 
 // --- Mock Data ---
 // In a real application, this data would be fetched from an API
@@ -99,16 +99,15 @@ const holdingsData = ref([
 // --- End Mock Data ---
 
 const userStore = useUserStore();
-const router = useRouter();
 
 onMounted(async () => {
   console.log("Mounted");
 
-  if (!userStore.state?.token) {
-    router.push('/login');
+  if (!userStore?.userId || !userStore?.token) {
+    console.log("User not logged in, redirecting to login page.");
+    navigateTo('/login');
+    return;
   }
-
-  console.log(userStore.state)
 
 })
 
