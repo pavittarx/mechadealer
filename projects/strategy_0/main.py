@@ -1,6 +1,5 @@
 from pandas import DataFrame
 from strategylib import StrategyBuilder, Signal
-import pandas_ta as ta
 
 
 def strategyFunc(data: DataFrame):

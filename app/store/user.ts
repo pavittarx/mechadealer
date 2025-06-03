@@ -10,9 +10,18 @@ export const useUserStore = defineStore("userStore", {
     setToken(token: string) {
       this.token = token;
     },
+    async fetchUser() {
+      if (!this.userId) {
+        console.error("Unable to fetch user, UserId not present.");
+        return;
+      }
+
+      const url = process.env.BASE_URL + "/user/" + this.userId;
+      const res = await $fetch(url);
+    },
   },
   persist: {
-    storage: process.client && localStorage ? localStorage : undefined,
+    storage: import.meta.client && localStorage ? localStorage : undefined,
     pick: ["userId", "token"],
   },
 });

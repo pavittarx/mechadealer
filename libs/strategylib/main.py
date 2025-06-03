@@ -3,11 +3,13 @@ import pandas as pd
 from pandas import DataFrame
 from typing import Dict, Literal, Callable, Optional
 from pydantic import BaseModel
+from pandantic import Pandantic
 
 from datastore import DataStore
 from kafkalib import Kafka, Timeframe, Signal, SignalEvent, Topics
 from storelib import Store, Strategy
 from .data_builder import DataBuilder
+
 
 StrategyFn = Callable[[DataFrame], Signal | list[Signal] | None]
 
@@ -22,7 +24,6 @@ class StrategyConfig(BaseModel):
     tickers: str | list[str]
     run_tf: Timeframe
     broker: Literal["UPSTOX"]
-    init_data: Optional[DataFrame] = None
 
 
 class StrategyBuilder:
@@ -48,7 +49,6 @@ class StrategyBuilder:
         )
 
         self._add_tickers_to_priority()
-
         strategyConfig = store.get_strategy(strategy_name=name)
 
         if strategyConfig is None:
@@ -65,8 +65,9 @@ class StrategyBuilder:
         if init_data is not None:
             self._validate_init_data(init_data)
             self._add_data_to_store(init_data)
+            self.init_data = init_data
 
-            self._remove_tickers_from_priority()
+        self._remove_tickers_from_priority()
 
     def _add_tickers_to_priority(self):
         for tick in self.config.tickers:
