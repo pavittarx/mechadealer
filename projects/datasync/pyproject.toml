@@ -6,7 +6,6 @@ dependencies = [
   "datastore",
   "kafkalib>=0.1.1",
   "pandas>=2.2.3",
-  "prefect>=3.3.4",
   "psycopg>=3.2.6",
   "psycopg-binary>=3.2.6",
   "psycopg-pool>=3.2.6",

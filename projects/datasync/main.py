@@ -1,16 +1,14 @@
+import asyncio
 import pytz
 import json
 import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
 from questdb.ingress import Sender
-from prefect import flow, task
-from prefect.schedules import RRule
-
 from sources.upstox import UpstoxClient
 from datastore import Database, DataStore
 from kafkalib import Kafka, Topics
-from coreutils import Logger
+from coreutils import Logger, scheduler, CronTrigger
 
 log = Logger("datasync")
 logger = log.get_logger()
@@ -48,10 +46,9 @@ resample_freq = {
 }
 
 
-@task
 def get_priority_tickers_list():
     query = """
-                SELECT DISTINCT query_key, fetch_key, priority,
+                SELECT DISTINCT query_key, fetch_key, priority
                 FROM symbols
                 WHERE priority = TRUE;
             """
@@ -65,10 +62,9 @@ def get_priority_tickers_list():
         return tickers
 
 
-@task
 def get_non_priority_tickers_list():
     query = """
-                SELECT DISTINCT query_key, fetch_key, priority,
+                SELECT DISTINCT query_key, fetch_key, priority
                 FROM symbols
                 WHERE priority = FALSE;
             """
@@ -83,11 +79,10 @@ def get_non_priority_tickers_list():
         return tickers
 
 
-@task
 def latest_data_timestamp(ticker):
     query = """
                 SELECT ts, ticker 
-                FROM market_data  1
+                FROM market_data
                 WHERE ticker = %s 
                 ORDER BY ts DESC;
             """
@@ -104,7 +99,6 @@ def latest_data_timestamp(ticker):
             return data[0]
 
 
-@task
 def fetch_data_historic(ticker: dict[str, str], latest_ts: datetime | None = None):
     if latest_ts is None:
         candles = client.fetch_historical_data(
@@ -120,7 +114,6 @@ def fetch_data_historic(ticker: dict[str, str], latest_ts: datetime | None = Non
     return candles
 
 
-@task
 def fetch_data_intraday(ticker: dict[str, str]):
     candles = client.fetch_intraday_data(
         ticker["fetch_key"],
@@ -129,7 +122,6 @@ def fetch_data_intraday(ticker: dict[str, str]):
     return candles
 
 
-@task
 def save_data(ticker, data):
     df = pd.DataFrame(
         data, columns=["ts", "open", "high", "low", "close", "volume", "oi"]
@@ -145,10 +137,9 @@ def save_data(ticker, data):
             at="ts",
         )
 
-    logger.info("Data Ingested for Ticker", ticker["query_key"])
+    logger.info("Data Ingested for Ticker: %s", ticker["query_key"])
 
 
-@task
 def fetch_data(tick: dict[str, str]):
     latest_ts: datetime | None = latest_data_timestamp(tick)
 
@@ -175,7 +166,6 @@ def fetch_data(tick: dict[str, str]):
         return data
 
 
-@task
 def sync_instruments():
     nse = client.fetch_nse_instruments()
     bse = client.fetch_bse_instruments()
@@ -261,7 +251,6 @@ def sync_instruments():
     return inserted_count
 
 
-@task
 def trigger_kafka_events(tick: dict[str, str], data):
     logger.info("Init: Kafka Events Trigger")
 
@@ -328,13 +317,13 @@ def trigger_kafka_events(tick: dict[str, str], data):
                     row = data_tf.iloc[-1]
 
                     ts = (
-                        row.name
-                        if isinstance(row.name, pd.Timestamp)
-                        else pd.Timestamp(row.name)
+                        pd.to_datetime(str(row.name))
+                        if row.name is not None
+                        else pd.Timestamp.now()
                     )
 
                     message_tf = {
-                        "ticker": tick,
+                        "ticker": tick["query_key"],
                         "ts": ts.isoformat(),
                         "open": float(row["open"]),
                         "high": float(row["high"]),
@@ -357,44 +346,160 @@ def trigger_kafka_events(tick: dict[str, str], data):
                     )
 
 
-@flow
 def fetch_priority_tickers():
-    tickers = get_priority_tickers_list()
-    logger.info("Priority Tickers Fetched: %s", len(tickers))
+    try:
+        tickers = get_priority_tickers_list()
+        logger.info("Priority Tickers Fetched: %s", len(tickers))
 
-    for tick in tickers:
-        data = fetch_data(tick)
-        logger.info("Data fetched for ticker: %s", tick["query_key"])
-        trigger_kafka_events(tick, data)
-        logger.info("Events produced for ticker: %s", tick["query_key"])
-        save_data(tick, data)
-        logger.info("Data ingested for ticker: %s", tick["query_key"])
+        for tick in tickers:
+            try:
+                data = fetch_data(tick)
+                logger.info("Data fetched for ticker: %s", tick["query_key"])
+
+                # Retry Kafka events up to 3 times
+                for attempt in range(3):
+                    try:
+                        trigger_kafka_events(tick, data)
+                        logger.info("Events produced for ticker: %s", tick["query_key"])
+                        break
+                    except Exception as e:
+                        if attempt == 2:  # Last attempt
+                            logger.error(
+                                "Failed to produce Kafka events for %s after 3 attempts: %s",
+                                tick["query_key"],
+                                str(e),
+                            )
+                        else:
+                            logger.warning(
+                                "Retrying Kafka events for %s (attempt %d): %s",
+                                tick["query_key"],
+                                attempt + 1,
+                                str(e),
+                            )
+                            continue
+
+                # Retry saving data up to 3 times
+                for attempt in range(3):
+                    try:
+                        save_data(tick, data)
+                        logger.info("Data ingested for ticker: %s", tick["query_key"])
+                        break
+                    except Exception as e:
+                        if attempt == 2:  # Last attempt
+                            logger.error(
+                                "Failed to save data for %s after 3 attempts: %s",
+                                tick["query_key"],
+                                str(e),
+                            )
+                        else:
+                            logger.warning(
+                                "Retrying save data for %s (attempt %d): %s",
+                                tick["query_key"],
+                                attempt + 1,
+                                str(e),
+                            )
+                            continue
+
+            except Exception as e:
+                logger.error(
+                    "Error processing ticker %s: %s", tick["query_key"], str(e)
+                )
+                continue
+
+    except Exception as e:
+        logger.error("Error in fetch_priority_tickers: %s", str(e))
 
 
-@flow
 def fetch_non_priority_tickers():
-    logger.info("Fetching Non-Priority Tickers")
-    tickers = get_non_priority_tickers_list()
-    for tick in tickers:
-        data = fetch_data(tick)
-        logger.info("Data fetched for ticker: %s", tick["query_key"])
-        save_data(tick, data)
-        logger.info("Data ingested for ticker: %s", tick["query_key"])
+    try:
+        logger.info("Fetching Non-Priority Tickers")
+        tickers = get_non_priority_tickers_list()
+        for tick in tickers:
+            try:
+                data = fetch_data(tick)
+                logger.info("Data fetched for ticker: %s", tick["query_key"])
+
+                # Retry saving data up to 3 times
+                for attempt in range(3):
+                    try:
+                        save_data(tick, data)
+                        logger.info("Data ingested for ticker: %s", tick["query_key"])
+                        break
+                    except Exception as e:
+                        if attempt == 2:  # Last attempt
+                            logger.error(
+                                "Failed to save data for %s after 3 attempts: %s",
+                                tick["query_key"],
+                                str(e),
+                            )
+                        else:
+                            logger.warning(
+                                "Retrying save data for %s (attempt %d): %s",
+                                tick["query_key"],
+                                attempt + 1,
+                                str(e),
+                            )
+                            continue
+
+            except Exception as e:
+                logger.error(
+                    "Error processing ticker %s: %s", tick["query_key"], str(e)
+                )
+                continue
+
+    except Exception as e:
+        logger.error("Error in fetch_non_priority_tickers: %s", str(e))
 
 
 if __name__ == "__main__":
     sync_instruments()
     logger.info("Instrumenst Synced Successfully")
 
-    fetch_priority_tickers.serve(
-        name="fetch-priority-tickers",
-        schedules=[
-            RRule(
-                "FREQ=MINUTELY;INTERVAL=1;BYHOUR=9,10,11,12,13,14,15,16;BYMINUTE=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;WKST=MO",
-                timezone="Asia/Kolkata",
-                slug="priority-tickers-schedule",
-            )
-        ],
+    loop = asyncio.get_event_loop()
+
+    priority_trigger = CronTrigger(
+        second="2",
+        minute="*",
+        hour="9-16",
+        day_of_week="1-5",
+        timezone="Asia/Kolkata",
+    )
+    scheduler.add_job(
+        fetch_priority_tickers,
+        trigger=priority_trigger,
+        id="fetch_priority_tickers",
+        name="Fetch Priority Tickers",
+        max_instances=1,
+        misfire_grace_time=20,
+        coalesce=False,
     )
 
-    # fetch_priority_tickers()
+    # Non-priority tickers - every 5 minutes during market hours
+    non_priority_trigger = CronTrigger(
+        hour="20",
+        day_of_week="1-5",
+        timezone="Asia/Kolkata",
+    )
+    scheduler.add_job(
+        fetch_non_priority_tickers,
+        trigger=non_priority_trigger,
+        id="fetch_non_priority_tickers",
+        name="Fetch Non-Priority Tickers",
+        max_instances=1,
+        misfire_grace_time=60,
+        coalesce=True,
+    )
+
+    # Configure scheduler with error handling
+    scheduler.configure(
+        job_defaults={"max_instances": 1, "misfire_grace_time": 30, "coalesce": True}
+    )
+
+    scheduler.start()
+
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        logger.info("CLI Tool Stopped")
+        scheduler.shutdown(wait=True)
+        loop.close()

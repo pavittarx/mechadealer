@@ -2,9 +2,9 @@
   <div class="dashboard-page-wrapper">
     <div class="dashboard-container">
       <header class="dashboard-header">
-        <h1>User Dashboard</h1>
+        <h1>Dashboard</h1>
         <div class="user-details">
-          <p><strong>User:</strong> {{ userData.name }} ({{ userData.email }})</p>
+          <p><strong>User:</strong> {{ userStore.name }} {{ userStore?.email ? `(${userStore.email})` : "" }}</p>
         </div>
       </header>
 
@@ -13,21 +13,17 @@
         <div class="capital-grid">
           <div class="capital-item">
             <span class="label">Total Capital</span>
-            <span class="value">{{ formatCurrency(capitalData.totalCapital) }}</span>
+            <span class="value">{{ formatCurrency(userStore.capital) }}</span>
           </div>
           <div class="capital-item">
             <span class="label">Invested in Strategies</span>
-            <span class="value">{{ formatCurrency(capitalData.investedInStrategies) }}</span>
+            <span class="value">{{ formatCurrency(userStore.capital_used) }}</span>
           </div>
           <div class="capital-item">
             <span class="label">Available Capital</span>
-            <span class="value">{{ formatCurrency(capitalData.availableCapital) }}</span>
+            <span class="value">{{ formatCurrency(userStore.capital_remaining) }}</span>
           </div>
-          <div class="capital-item">
-            <span class="label">Unrealized P&L</span>
-            <span class="value" :class="pnlClass(capitalData.unrealizedPnl)">{{
-              formatCurrency(capitalData.unrealizedPnl) }}</span>
-          </div>
+
         </div>
       </section>
 
@@ -53,21 +49,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useUserStore } from "@/store/user";
-
-// --- Mock Data ---
-// In a real application, this data would be fetched from an API
-const userData = ref({
-  name: 'John Doe',
-  email: 'john.doe@example.com',
-  userId: 'user123'
-});
-
-const capitalData = ref({
-  totalCapital: 100000,
-  investedInStrategies: 65000,
-  availableCapital: 35000,
-  unrealizedPnl: 5250.75
-});
 
 const holdingsData = ref([
   {
@@ -96,19 +77,20 @@ const holdingsData = ref([
   }
 ]);
 
-// --- End Mock Data ---
-
 const userStore = useUserStore();
 
 onMounted(async () => {
-  console.log("Mounted");
+  const userId = userStore?.userId;
+  const token = userStore?.token;
 
-  if (!userStore?.userId || !userStore?.token) {
+  if (!userId || !token) {
     console.log("User not logged in, redirecting to login page.");
     navigateTo('/login');
     return;
   }
 
+  await userStore.fetchUser()
+  await userStore.fetchUserStrategies();
 })
 
 
@@ -121,7 +103,6 @@ const pnlClass = (pnl: number) => {
   if (pnl < 0) return 'pnl-negative';
   return 'pnl-neutral';
 };
-
 
 
 definePageMeta({
