@@ -28,17 +28,17 @@
       </section>
 
       <section class="holdings-section">
-        <h2>Holdings (Invested Strategies)</h2>
-        <div v-if="holdingsData.length === 0" class="no-holdings">
+        <h2>Invested Strategies</h2>
+        <div v-if="userStore.strategies.length === 0" class="no-holdings">
           <p>No strategies invested in yet.</p>
         </div>
         <div v-else class="holdings-list">
-          <div v-for="holding in holdingsData" :key="holding.id" class="holding-item">
-            <h3>{{ holding.name }}</h3>
-            <p><strong>Invested:</strong> {{ formatCurrency(holding.investedAmount) }}</p>
-            <p><strong>Current Value:</strong> {{ formatCurrency(holding.currentValue) }}</p>
-            <p><strong>P&L:</strong> <span :class="pnlClass(holding.pnl)">{{ formatCurrency(holding.pnl) }}</span></p>
-            <p><strong>Strategy Type:</strong> {{ holding.type }}</p>
+          <div v-for="strategy in userStore.strategies" :key="strategy?.id || 0" class="holding-item">
+            <h3>{{ strategy.name }}</h3>
+            <p><strong>Invested:</strong> {{ formatCurrency(strategy.capital) }}</p>
+            <p><strong>Current Value:</strong> {{ formatCurrency(strategy.capital_used) }}</p>
+            <p><strong>P&L:</strong> <span :class="pnlClass(strategy.pnl)">{{ formatCurrency(strategy.unrealized_pnl)
+            }}</span></p>
           </div>
         </div>
       </section>
@@ -47,35 +47,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { onMounted } from 'vue';
 import { useUserStore } from "@/store/user";
-
-const holdingsData = ref([
-  {
-    id: 'strategy001',
-    name: 'Aggressive Growth Alpha',
-    investedAmount: 25000,
-    currentValue: 27500,
-    pnl: 2500,
-    type: 'Equity Momentum'
-  },
-  {
-    id: 'strategy002',
-    name: 'Stable Income Beta',
-    investedAmount: 30000,
-    currentValue: 31500.75,
-    pnl: 1500.75,
-    type: 'Fixed Income Arbitrage'
-  },
-  {
-    id: 'strategy003',
-    name: 'Tech Opportunities Gamma',
-    investedAmount: 10000,
-    currentValue: 11250,
-    pnl: 1250,
-    type: 'Long/Short Tech Sector'
-  }
-]);
 
 const userStore = useUserStore();
 

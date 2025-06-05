@@ -4,7 +4,6 @@ type UserResponse = {
   is_success: boolean;
   data: {
     username: string;
-
     name: string;
     email: string;
     is_active: boolean;
@@ -13,6 +12,27 @@ type UserResponse = {
     capital_remaining: number;
     capital_used: number;
   };
+};
+
+type UserStrategiesData = {
+  id: number;
+  name: string;
+  pnl: number;
+  units: number;
+  unrealized_pnl: number;
+  capital: number;
+  capital_remaining: number;
+  capital_used: number;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+type UserStrategiesResponse = {
+  is_error: boolean;
+  message: string;
+  is_success: boolean;
+  data: UserStrategiesData[];
 };
 
 export const useUserStore = defineStore("userStore", {
@@ -27,6 +47,7 @@ export const useUserStore = defineStore("userStore", {
     capital: 0,
     capital_remaining: 0,
     capital_used: 0,
+    strategies: [] as UserStrategiesData[],
   }),
   actions: {
     setUserId(userId: number) {
@@ -82,8 +103,9 @@ export const useUserStore = defineStore("userStore", {
       const baseUrl = runtimeConfig.public.baseUrl;
 
       try {
-        const url = baseUrl + "/user/strategies/";
-        const res: any = await $fetch(url, {
+        const url = baseUrl + "/user/strategies";
+
+        const res: UserStrategiesResponse = await $fetch(url, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${this.token}`,
@@ -94,8 +116,9 @@ export const useUserStore = defineStore("userStore", {
           throw new Error(res.message || "Error fetching user holdings");
         }
 
-        console.log("Fetched holdings", res.data);
-        return res.data;
+        console.log("Fetched user strategies:", res.data);
+
+        this.strategies = res.data;
       } catch (error) {
         console.error("Error fetching user holdings:", error);
       }
