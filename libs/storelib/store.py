@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 from typing import Literal
 
 from .models import Strategy, Order
@@ -36,9 +37,17 @@ def calculate_amount_from_units(
 
 
 class Store:
+    def __init__(self, conn=None):
+        self._conn = conn
+
+    def _get_conn(self):
+        if self._conn:
+            return self._conn
+        return engine.begin()  # Use global engine directly
+
     def create_strategy(self, strategy: Strategy):
         try:
-            with engine.begin() as conn:
+            with self._get_conn() as conn:
                 print(strategy)
 
                 conn.execute(
@@ -56,7 +65,8 @@ class Store:
                         is_active=True,
                     )
                 )
-                conn.commit()
+                if self._conn is None:  # Only commit if we own the connection
+                    conn.commit()
         except SQLAlchemyError as e:
             print(f"Error creating strategy: {e}")
             raise
@@ -68,7 +78,7 @@ class Store:
             raise ValueError("Either strategy_id or strategy_name must be provided")
 
         try:
-            with engine.begin() as conn:
+            with self._get_conn() as conn:
                 query = strategies.select().where(
                     (strategies.c.id == strategy_id)
                     | (strategies.c.name == strategy_name)
@@ -83,7 +93,7 @@ class Store:
         if not amount or amount <= 0:
             raise ValueError("Amount must be greater than 0")
 
-        with engine.begin() as conn:
+        with self._get_conn() as conn:
             try:
                 query_user = users.select().where(users.c.id == user_id)
                 user = conn.execute(query_user).fetchone()
@@ -168,17 +178,19 @@ class Store:
                 conn.execute(query_update_user)
                 conn.execute(query_update_strategy)
 
-                conn.commit()
+                if self._conn is None:  # Only commit if we own the connection
+                    conn.commit()
             except SQLAlchemyError as e:
                 print(f"Error investing in strategy: {e}")
-                conn.rollback()
+                if self._conn is None:  # Only rollback if we own the connection
+                    conn.rollback()
                 raise
 
     def withdraw_from_strategy(self, strategy_id: int, user_id: int, amount: float):
         if not amount or amount <= 0:
             raise ValueError("Amount must be greater than 0")
 
-        with engine.begin() as conn:
+        with self._get_conn() as conn:
             try:
                 query_user = users.select().where(users.c.id == user_id)
                 user = conn.execute(query_user).fetchone()
@@ -264,17 +276,20 @@ class Store:
                 conn.execute(query_update_user)
                 conn.execute(query_update_strategy)
 
-                conn.commit()
+                if self._conn is None:  # Only commit if we own the connection
+                    conn.commit()
             except SQLAlchemyError as e:
                 print(f"Error withdrawing from strategy: {e}")
-                conn.rollback()
+                if self._conn is None:  # Only rollback if we own the connection
+                    conn.rollback()
+                raise
 
     def get_order(self, order_id: int | None = None, broker_id: str | None = None):
         if not order_id and not broker_id:
             raise ValueError("Either order_id or broker_id must be provided")
 
         try:
-            with engine.begin() as conn:
+            with self._get_conn() as conn:
                 query = orders.select().where(
                     (orders.c.id == order_id) | (orders.c.broker_id == broker_id)
                 )
@@ -296,7 +311,7 @@ class Store:
             where = where & (orders.c.type == type)
 
         try:
-            with engine.begin() as conn:
+            with self._get_conn() as conn:
                 query = orders.select().where(where)
                 result = conn.execute(query).fetchall()
                 return result
@@ -309,7 +324,7 @@ class Store:
             raise ValueError("ref_id must be provided")
 
         try:
-            with engine.begin() as conn:
+            with self._get_conn() as conn:
                 query = orders.select().where(
                     (orders.c.ref_id == ref_id) & (orders.c.is_active == "true")
                 )
@@ -321,7 +336,7 @@ class Store:
 
     def save_order(self, order: Order):
         try:
-            with engine.begin() as conn:
+            with self._get_conn() as conn:
                 conn.execute(
                     orders.insert().values(
                         strategy_id=order.strategy_id,
@@ -344,7 +359,8 @@ class Store:
                         is_active=order.is_active,
                     )
                 )
-                conn.commit()
+                if self._conn is None:  # Only commit if we own the connection
+                    conn.commit()
         except SQLAlchemyError as e:
             print(f"Error saving order: {e}")
             raise
@@ -353,7 +369,7 @@ class Store:
         if not order.id:
             raise ValueError("Order ID must be provided")
 
-        with engine.begin() as conn:
+        with self._get_conn() as conn:
             try:
                 query_order = orders.select().where(
                     (orders.c.id == order.id) | (orders.c.broker_id == order.broker_id)
@@ -387,15 +403,17 @@ class Store:
                     )
                 )
                 conn.execute(query)
-                conn.commit()
+                if self._conn is None:  # Only commit if we own the connection
+                    conn.commit()
             except SQLAlchemyError as e:
                 print(f"Error updating order: {e}")
-                conn.rollback()
+                if self._conn is None:  # Only rollback if we own the connection
+                    conn.rollback()
                 raise
 
     def get_strategies(self):
         try:
-            with engine.begin() as conn:
+            with self._get_conn() as conn:
                 query = strategies.select()
                 result = conn.execute(query).fetchall()
                 return result
@@ -408,12 +426,17 @@ class Store:
             raise ValueError("user_id must be provided")
 
         try:
-            with engine.begin() as conn:
-                query = user_strategies.select().where(
-                    user_strategies.c.user_id == user_id
-                )
-                result = conn.execute(query).fetchall()
+            with self._get_conn() as conn:
+                query_text = f"""
+                    SELECT * from strategies s
+                    JOIN user_strategies us ON s.id = us.strategy_id
+                    WHERE us.user_id = {user_id};
+                """
+
+                stmt = text(query_text)
+                result = conn.execute(stmt).fetchall()
                 return result
+
         except SQLAlchemyError as e:
             print(f"Error fetching strategies: {e}")
             raise

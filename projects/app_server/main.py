@@ -2,19 +2,18 @@ from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Annotated, TypedDict
-
 from storelib import Store, Users
 import jwt
 import os
 import logging
 
+JWT_SECRET = os.getenv("JWT_SECRET")
+jwt_algorithm = "HS256"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
-
 app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],  # Allows all origins
@@ -41,10 +40,6 @@ class RegisterReq(BaseModel):
     username: str
     password: str
     name: str
-
-
-JWT_SECRET = os.getenv("JWT_SECRET")
-jwt_algorithm = "HS256"
 
 
 TokenData = TypedDict(
@@ -129,6 +124,37 @@ async def login(req: Login):
         }
 
 
+@app.get("/user/strategies")
+def get_user_strategies(
+    Authorization: Annotated[str | None, Header(convert_underscores=False)],
+):
+    try:
+        if not Authorization:
+            raise Exception("Authorization header is missing")
+
+        token = Authorization.split(" ")[1]
+        data = decode_jwt(token)
+
+        res = store.get_user_strategies(data["user_id"])
+
+        if not res:
+            raise Exception("No strategies found for the user")
+
+        return {
+            "is_error": False,
+            "is_success": True,
+            "message": "User strategies fetched successfully",
+            "data": [row._mapping for row in res],
+        }
+    except Exception as e:
+        return {
+            "is_error": True,
+            "is_success": False,
+            "message": str(e),
+            "data": None,
+        }
+
+
 @app.get("/user/{user_id}")
 async def get_user(
     Authorization: Annotated[str | None, Header(convert_underscores=False)],
@@ -148,7 +174,7 @@ async def get_user(
         return {
             "is_error": False,
             "is_success": True,
-            "message": "Strategies fetched successfully",
+            "message": "User Details fetched successfully",
             "data": res,
         }
     except Exception as e:
