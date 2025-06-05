@@ -70,14 +70,6 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
 
-  prefect:
-    image: prefecthq/prefect:3-latest
-    container_name: prefect
-    ports:
-      - "4200:4200"
-    command: "prefect server start --host 0.0.0.0"
-    restart: always
-
   datasync:
     build:
       context: ..
