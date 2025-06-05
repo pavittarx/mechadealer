@@ -4,11 +4,21 @@
     <p>This page will list all strategies available for investment.</p>
     <!-- Placeholder content -->
     <ul class="strategy-list">
-      <li v-for="strategy in availableStrategies" :key="strategy.id">
+      <li v-for="strategy in stgStore.strategies" :key="strategy.id">
         <NuxtLink :to="`/strategies/${strategy.id}`">
           <h2>{{ strategy.name }}</h2>
           <p>{{ strategy.description }}</p>
-          <p><strong>Risk Level:</strong> {{ strategy.riskLevel }}</p>
+
+          <p>
+            <strong>Capital Invested:</strong> {{ strategy.capital }}
+          </p>
+          <p>
+            <strong>Capital (In Use):</strong> {{ strategy.capital_used }}
+          </p>
+          <p>
+            <strong>Unrealized Pnl:</strong> {{ strategy.unrealized_pnl }}
+          </p>
+
         </NuxtLink>
       </li>
     </ul>
@@ -16,15 +26,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted } from 'vue';
+import { useStrategiesStore } from '@/store/strategy';
 
-// Placeholder data
-const availableStrategies = ref([
-  { id: 'strategy001', name: 'Aggressive Growth Alpha', description: 'High-risk, high-reward equity strategy.', riskLevel: 'High' },
-  { id: 'strategy002', name: 'Stable Income Beta', description: 'Focuses on consistent income generation.', riskLevel: 'Low' },
-  { id: 'strategy003', name: 'Tech Opportunities Gamma', description: 'Invests in emerging technology sectors.', riskLevel: 'Medium-High' },
-  { id: 'strategy004', name: 'Global Diversified Delta', description: 'A balanced portfolio across global markets.', riskLevel: 'Medium' },
-]);
+const stgStore = useStrategiesStore();
+
+onMounted(async () => {
+  if (!stgStore?.fetchStrategies) {
+    return
+  }
+
+  await stgStore.fetchStrategies();
+});
 
 definePageMeta({
   layout: 'default'
@@ -36,13 +49,15 @@ definePageMeta({
   padding: 30px;
   background-color: #ffffff;
   border-radius: 8px;
-  margin: 20px; /* Add margin if main-content doesn't have padding */
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  margin: 20px;
+  /* Add margin if main-content doesn't have padding */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 h1 {
   font-size: 2em;
-  color: #1A237E; /* Deep Indigo */
+  color: #1A237E;
+  /* Deep Indigo */
   margin-bottom: 20px;
 }
 
@@ -73,12 +88,13 @@ p {
 }
 
 .strategy-list li:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .strategy-list h2 {
   font-size: 1.5em;
-  color: #283593; /* Indigo */
+  color: #283593;
+  /* Indigo */
   margin-bottom: 8px;
 }
 

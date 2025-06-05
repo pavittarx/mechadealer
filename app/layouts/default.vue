@@ -11,8 +11,8 @@
 
         <div class="nav-section">
           <h3 class="nav-section-title">My Invested Strategies</h3>
-          <ul v-if="investedStrategies.length > 0" class="invested-strategies-list">
-            <li v-for="strategy in investedStrategies" :key="strategy.id">
+          <ul v-if="userStore.strategies.length > 0" class="invested-strategies-list">
+            <li v-for="strategy in userStore.strategies" :key="strategy.id">
               <NuxtLink :to="`/strategies/${strategy.id}`" class="nav-sub-item" active-class="nav-item-active">
                 {{ strategy.name }}
               </NuxtLink>
@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -47,23 +47,13 @@ const layoutCls = computed(() => {
   };
 });
 
-// This is a placeholder. In a real app, you'd fetch this from a store or API.
-// For now, we'll use a simplified version of what might be on the dashboard.
-const investedStrategies = ref([
-  { id: 'strategy001', name: 'Aggressive Growth Alpha' },
-  { id: 'strategy002', name: 'Stable Income Beta' },
-  { id: 'strategy003', name: 'Tech Opportunities Gamma' }
-]);
+const userStore = useUserStore();
 
-// In a real application, you might fetch this data or get it from a global store
-// onMounted(async () => {
-//   try {
-//     // const holdings = await $fetch('/api/holdings'); // Or from a store
-//     // investedStrategies.value = holdings.map(h => ({ id: h.id, name: h.name }));
-//   } catch (error) {
-//     console.error("Failed to fetch invested strategies for sidebar:", error);
-//   }
-// });
+onMounted(async () => {
+  // Fetch user data or strategies when the component mounts
+  await userStore.fetchUserStrategies();
+});
+
 </script>
 
 <style scoped>
@@ -76,7 +66,8 @@ const investedStrategies = ref([
 
 .app-layout.no-sidebar-layout .main-content {
   margin-left: 0;
-  width: 100%; /* Ensure main content takes full width */
+  width: 100%;
+  /* Ensure main content takes full width */
 }
 
 .sidebar {
@@ -117,13 +108,18 @@ const investedStrategies = ref([
 
 .nav-item .icon {
   margin-right: 12px;
-  font-size: 1.4em; /* Adjusted for SVG icons */
-  min-width: 24px; /* Basic alignment */
+  font-size: 1.4em;
+  /* Adjusted for SVG icons */
+  min-width: 24px;
+  /* Basic alignment */
   text-align: center;
-  color: #AAB6FE; /* Lighter Indigo/Lavender for better visibility */
-  opacity: 0.9; /* Slight opacity for non-active */
+  color: #AAB6FE;
+  /* Lighter Indigo/Lavender for better visibility */
+  opacity: 0.9;
+  /* Slight opacity for non-active */
   transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
-  vertical-align: middle; /* Better alignment with text */
+  vertical-align: middle;
+  /* Better alignment with text */
 }
 
 .nav-item:hover,
@@ -138,7 +134,8 @@ const investedStrategies = ref([
 .nav-sub-item:hover .icon {
   opacity: 1;
   transform: scale(1.1);
-  color: #FFFFFF; /* White on hover for max contrast */
+  color: #FFFFFF;
+  /* White on hover for max contrast */
 }
 
 .nav-item-active {
@@ -151,7 +148,8 @@ const investedStrategies = ref([
 }
 
 .nav-item-active .icon {
-  color: #1A237E; /* Deep Indigo to match text on Amber background */
+  color: #1A237E;
+  /* Deep Indigo to match text on Amber background */
   opacity: 1;
 }
 
