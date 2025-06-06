@@ -15,11 +15,13 @@ class DataBuilder:
                 "high": pd.Series(dtype="float64"),
                 "low": pd.Series(dtype="float64"),
                 "close": pd.Series(dtype="float64"),
-                "volume": pd.Series(dtype="float64"),
-                "open_interest": pd.Series(dtype="float64"),
+                "volume": pd.Series(dtype="int64"),
+                "oi": pd.Series(dtype="int64"),
             }
 
-            df = pd.DataFrame(columns=columns_with_types)
+            df = pd.DataFrame(columns=list(columns_with_types.keys()))
+            for col, series in columns_with_types.items():
+                df[col] = df[col].astype(series.dtype)
             df = df.set_index("ts")
 
             self.data[tick] = df
@@ -45,7 +47,11 @@ class DataBuilder:
         df = self.data[tick]
         new_df = pd.DataFrame([data])
         new_df.set_index("ts", inplace=True)
-        df = pd.concat([df, new_df])
+
+        if df.empty:
+            df = new_df
+        else:
+            df = pd.concat([df, new_df])
 
         self.data[tick] = df
 

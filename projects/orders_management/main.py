@@ -1,7 +1,8 @@
+import json
 from coreutils import Logger
-from kafkalib import SignalEvent
 from sources import UpstoxBroker
 from storelib import Store, Order
+from kafkalib import Kafka, Topics, SignalEvent
 from typing import Any
 
 store = Store()
@@ -472,39 +473,27 @@ def on_exit_signal(signal: SignalEvent):
 
 
 if __name__ == "__main__":
-    # store.create_strategy(
-    #     Strategy(
-    #         id=0,
-    #         description="test_strategy",
-    #         run_tf="1M",
-    #         name="test_strategy",
-    #         capital=100,
-    #         capital_remaining=100,
-    #     )
-    # )
+    k = Kafka()
+    app = k.get_app()
 
-    on_entry_signal(
-        SignalEvent(
-            strategy="test_strategy",
-            ticker="IDEA.NSE",
-            action="BUY",
-            type="ENTRY",
-            order_type="MARKET",
-            quantity=1,
-            sl=0.01,
-            tp=0.01,
-        ),
-    )
+    with app.get_consumer() as consumer:
+        consumer.subscribe([Topics.SIGNALS.value.name])
+        logger.info("[Order Management]: Ready")
 
-    on_exit_signal(
-        SignalEvent(
-            strategy="test_strategy",
-            ticker="IDEA.NSE",
-            action="SELL",
-            type="EXIT",
-            order_type="MARKET",
-            quantity=1,
-        ),
-    )
+        while True:
+            res = consumer.poll(1)
 
-    pass
+            if res is None or res.value() is None:
+                # print("No Signals")
+                continue
+
+            value = res.value().decode("utf-8")
+            data = json.loads(value)
+
+            if data["type"] == "ENTRY":
+                signal = SignalEvent.model_validate(data)
+                on_entry_signal(signal)
+
+            elif data["type"] == "EXIT":
+                signal = SignalEvent.model_validate(data)
+                on_exit_signal(signal)

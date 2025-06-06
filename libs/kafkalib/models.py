@@ -46,4 +46,4 @@ class Signal(BaseModel):
 class SignalEvent(Signal):
     strategy: str
     ticker: str
-    ts: datetime = Field(default_factory=datetime.now)
+    ts: str = Field(default_factory=lambda: datetime.now().isoformat())

@@ -1,16 +1,24 @@
 from pandas import DataFrame
 from strategylib import StrategyBuilder, Signal
+import pandas_ta as ta
 
 
 def strategyFunc(data: DataFrame):
+    if len(data) < 12:
+        print("Insufficient data for strategy execution. Need at least 19 data points.")
+        print("Available:", len(data))
+        return []
+
     df = data.copy()
-    df["EMA_9"] = ta.ema(df["close"], length=9)
-    df["EMA_19"] = ta.ema(df["close"], length=19)
+    df["EMA_4"] = ta.ema(df["close"], length=4)
+    df["EMA_8"] = ta.ema(df["close"], length=8)
 
     if df.empty:
         return []
 
-    if df["EMA_9"].iloc[-1] > df["EMA_19"].iloc[-1]:
+    print("DX:", df)
+
+    if df["EMA_4"].iloc[-1] > df["EMA_8"].iloc[-1]:
         return [
             Signal(
                 action="BUY",
@@ -20,7 +28,7 @@ def strategyFunc(data: DataFrame):
             )
         ]
 
-    elif df["EMA_9"].iloc[-1] < df["EMA_19"].iloc[-1]:
+    elif df["EMA_8"].iloc[-1] < df["EMA_4"].iloc[-1]:
         return [
             Signal(
                 action="SELL",

@@ -20,6 +20,8 @@ node_modules
 # Logs
 logs
 *.log
+**/.logs/*
+**/.logs/*
 
 # Misc
 .DS_Store

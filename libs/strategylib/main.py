@@ -3,7 +3,6 @@ import pandas as pd
 from pandas import DataFrame
 from typing import Dict, Literal, Callable, Optional
 from pydantic import BaseModel
-from pandantic import Pandantic
 
 from datastore import DataStore
 from kafkalib import Kafka, Timeframe, Signal, SignalEvent, Topics
@@ -48,7 +47,6 @@ class StrategyBuilder:
             broker=broker,
         )
 
-        self._add_tickers_to_priority()
         strategyConfig = store.get_strategy(strategy_name=name)
 
         if strategyConfig is None:
@@ -67,11 +65,13 @@ class StrategyBuilder:
             self._add_data_to_store(init_data)
             self.init_data = init_data
 
-        self._remove_tickers_from_priority()
-
-    def _add_tickers_to_priority(self):
         for tick in self.config.tickers:
             ds.add_to_priority(tick)
+
+    def __del__(self):
+        # Remove tickers from priority when strategy is deleted
+        for tick in self.config.tickers:
+            ds.remove_from_priority(tick)
 
     def _validate_init_data(self, init_data: DataFrame | Dict[str, DataFrame]):
         if init_data is not None:
@@ -99,10 +99,6 @@ class StrategyBuilder:
                 df = init_data[tick]
                 df.set_index("ts", inplace=True)
                 self.store.init_ticker_data(tick, df)
-
-    def _remove_tickers_from_priority(self):
-        for tick in self.config.tickers:
-            ds.remove_from_priority(tick)
 
     def run(self):
         datafeed_topic = kafka.get_feed_topic(self.config.run_tf)
