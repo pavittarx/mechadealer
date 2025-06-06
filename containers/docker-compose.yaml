@@ -74,20 +74,17 @@ services:
     build:
       context: ..
       dockerfile: projects/datasync/Dockerfile
-    container_name: datasync_service
+    container_name: datasync
     restart: always
     depends_on:
       - questdb
       - kafka
-      - prefect
     env_file:
       - ../.env
     environment:
-      - PREFECT_API_URL=http://prefect:4200/api
       - KAFKA_BROKER_ADDRESS=kafka:29092
       - QDB_CONNECTION_STRING=${QDB_CONNECTION_STRING_COMPOSE}
       - QDB_CLIENT_CONF=${QDB_CLIENT_CONF_COMPOSE}
-
 
 volumes:
   pg_data:

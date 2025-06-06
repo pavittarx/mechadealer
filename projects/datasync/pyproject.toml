@@ -10,6 +10,7 @@ dependencies = [
   "psycopg-binary>=3.2.6",
   "psycopg-pool>=3.2.6",
   "python-dotenv>=1.1.0",
+  "pytz>=2025.2",
   "questdb[dataframe]>=2.0.3",
   "quixstreams>=3.13.1",
   "requests>=2.32.3",
