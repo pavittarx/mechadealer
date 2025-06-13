@@ -472,28 +472,43 @@ def on_exit_signal(signal: SignalEvent):
         )
 
 
+def init_broker():
+    try:
+        # Triggers Auth Flow, if token is expired or unavailable
+        UpstoxBroker("orders_management_init")
+    except Exception as e:
+        logger.error("Error initializing broker", extra={"error": str(e)})
+        raise e
+
+
 if __name__ == "__main__":
-    k = Kafka()
-    app = k.get_app()
+    try:
+        k = Kafka()
+        app = k.get_app()
 
-    with app.get_consumer() as consumer:
-        consumer.subscribe([Topics.SIGNALS.value.name])
-        logger.info("[Order Management]: Ready")
+        init_broker()
 
-        while True:
-            res = consumer.poll(1)
+        with app.get_consumer() as consumer:
+            consumer.subscribe([Topics.SIGNALS.value.name])
+            logger.info("[Order Management]: Ready")
 
-            if res is None or res.value() is None:
-                # print("No Signals")
-                continue
+            while True:
+                res = consumer.poll(1)
 
-            value = res.value().decode("utf-8")
-            data = json.loads(value)
+                if res is None or res.value() is None:
+                    # print("No Signals")
+                    continue
 
-            if data["type"] == "ENTRY":
-                signal = SignalEvent.model_validate(data)
-                on_entry_signal(signal)
+                value = res.value().decode("utf-8")
+                data = json.loads(value)
 
-            elif data["type"] == "EXIT":
-                signal = SignalEvent.model_validate(data)
-                on_exit_signal(signal)
+                if data["type"] == "ENTRY":
+                    signal = SignalEvent.model_validate(data)
+                    on_entry_signal(signal)
+
+                elif data["type"] == "EXIT":
+                    signal = SignalEvent.model_validate(data)
+                    on_exit_signal(signal)
+
+    except Exception as e:
+        logger.error("Error in orders management", extra={"error": str(e)})

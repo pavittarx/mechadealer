@@ -33,3 +33,6 @@ logs
 .env.*
 !.env.example
 **/*.egg-info/*
+
+**/.creds/*
+.key

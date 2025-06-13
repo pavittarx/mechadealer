@@ -4,8 +4,12 @@ import os
 
 from dotenv import load_dotenv
 from datastore import DataStore
+from coreutils import CredentialsManager
+from datetime import datetime
+from .auth import authorize
 
 ds = DataStore()
+credsStore = CredentialsManager()
 
 load_dotenv()
 BASE_URL = "https://api.upstox.com"
@@ -28,7 +32,31 @@ class UpstoxBroker:
             raise ValueError("Strategy Name must be provided.")
 
         self.strategy = strategy
-        self.token = self.get_token()
+        self._authorize()
+
+    def _authorize(self):
+        if not credsStore.get_credential("upstox.token"):
+            authorize()
+
+        token = credsStore.get_credential("upstox.token")
+        last_fetched = credsStore.get_credential("upstox.last_fetched")
+
+        if not token or not last_fetched:
+            self.re_authorize()
+            return
+
+        last_fetched = datetime.fromisoformat(last_fetched)
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Upstox tokens are only valid for a day
+        if last_fetched < today:
+            authorize()
+
+        self.token = credsStore.get_credential("upstox.token")
+
+    def re_authorize(self):
+        authorize()
+        self.token = credsStore.get_credential("upstox.token")
 
     def _get_headers(self):
         return {
@@ -36,10 +64,6 @@ class UpstoxBroker:
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
-
-    def get_token(self):
-        # TODO: implement token mechanism
-        return "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzSEM1WjIiLCJqdGkiOiI2ODMwMjNmMmM5ZDQzODMwY2ZiOTljOTIiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc0Nzk4NTM5NCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzQ4MDM3NjAwfQ.OMS7LajvDmfXuTnlZj0jBvMtPT9G2LvclVPPydmmCa8"
 
     def _get_instrument_key(self, ticker: str):
         if not ticker:

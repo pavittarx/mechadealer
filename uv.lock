@@ -347,16 +347,18 @@ schemaregistry = [
 
 [[package]]
 name = "coreutils"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "libs/coreutils" }
 dependencies = [
     { name = "apscheduler" },
+    { name = "cryptography" },
     { name = "python-json-logger" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "apscheduler", specifier = ">=3.11.0" },
+    { name = "cryptography", specifier = ">=42.0.0" },
     { name = "python-json-logger", specifier = ">=3.3.0" },
 ]
 
