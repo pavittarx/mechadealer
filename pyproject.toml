@@ -1,5 +1,6 @@
 [project]
 dependencies = [
+  "brokerlib",
   "coreutils",
   "datastore",
   "kafka",
@@ -22,7 +23,7 @@ members = [
   "libs/datastore",
   "libs/storelib",
   "libs/coreutils",
-  "libs/strategylib",
+  "libs/strategylib", "libs/brokerlib",
 ]
 
 [tool.uv.sources]
@@ -31,6 +32,7 @@ kafkalib = { path = "libs/kafkalib", editable = true }
 storelib = { workspace = true }
 coreutils = { workspace = true }
 strategylib = { workspace = true }
+brokerlib = { workspace = true }
 
 [dependency-groups]
 dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]

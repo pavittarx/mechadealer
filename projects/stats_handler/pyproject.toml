@@ -1,5 +1,5 @@
 [project]
-name = "orders-management"
+name = "stats-handler"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,14 +7,10 @@ requires-python = ">=3.12"
 dependencies = [
     "brokerlib",
     "coreutils",
-    "datastore",
-    "kafkalib>=0.2.8",
-    "python-dotenv>=1.1.0",
     "storelib",
 ]
 
 [tool.uv.sources]
-datastore = { workspace = true }
-storelib = { workspace = true }
 coreutils = { workspace = true }
+storelib = { workspace = true }
 brokerlib = { workspace = true }

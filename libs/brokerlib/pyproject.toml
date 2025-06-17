@@ -1,14 +1,19 @@
 [project]
-name = "coreutils"
-version = "0.2.1"
+name = "brokerlib"
+version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "apscheduler>=3.11.0",
-    "python-json-logger>=3.3.0",
-    "cryptography>=42.0.0"
+    "coreutils",
+    "datastore",
+    "pytz>=2025.2",
+    "requests>=2.32.3",
 ]
+
+[tool.uv.sources]
+coreutils = { workspace = true }
+datastore = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
@@ -19,4 +24,4 @@ sources = ["."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["__init__.py"]
-force-include = { "." = "coreutils" }
+force-include = { "." = "brokerlib" }

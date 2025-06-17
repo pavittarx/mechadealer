@@ -1,3 +1,5 @@
 from .upstox import UpstoxBroker
 
-__all__ = ["UpstoxBroker"]
+__all__ = [
+    "UpstoxBroker",
+]
