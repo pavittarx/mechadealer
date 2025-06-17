@@ -36,3 +36,5 @@ logs
 
 **/.creds/*
 .key
+
+*.Identifier
