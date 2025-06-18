@@ -6,58 +6,59 @@
 
       <div class="details-grid">
         <div class="detail-item">
-          <span class="label">Risk Level:</span>
-          <span class="value">{{ strategy.riskLevel }}</span>
+          <span class="label">Total Capital</span>
+          <span class="value">{{ formatCurrency(strategy.capital) }}</span>
         </div>
         <div class="detail-item">
-          <span class="label">Asset Class:</span>
-          <span class="value">{{ strategy.assetClass }}</span>
+          <span class="label">Capital Used</span>
+          <span class="value">{{ formatCurrency(strategy.capital_used) }}</span>
         </div>
         <div class="detail-item">
-          <span class="label">Minimum Investment:</span>
-          <span class="value">{{ formatCurrency(strategy.minInvestment) }}</span>
+          <span class="label">Capital Available</span>
+          <span class="value">{{ formatCurrency(strategy.capital_remaining) }}</span>
         </div>
         <div class="detail-item">
-          <span class="label">Expected Return (Annualized):</span>
-          <span class="value">{{ strategy.expectedReturn }}%</span>
+          <span class="label">Units</span>
+          <span class="value">{{ strategy.units }}</span>
         </div>
       </div>
 
-      <section class="performance-section">
-        <h2>Performance Metrics</h2>
-        <p><em>(Historical performance data would be displayed here)</em></p>
-        <!-- Placeholder for charts or tables -->
-      </section>
-
-      <section class="investment-details-section" v-if="userInvestment">
-        <h2>Your Investment</h2>
+      <div class="performance-section">
+        <h2>Performance</h2>
         <div class="details-grid">
           <div class="detail-item">
-            <span class="label">Amount Invested:</span>
-            <span class="value">{{ formatCurrency(userInvestment.investedAmount) }}</span>
+            <span class="label">Realized P&L</span>
+            <span class="value" :class="pnlClass(strategy.pnl)">
+              {{ formatCurrency(strategy.pnl) }}
+            </span>
           </div>
           <div class="detail-item">
-            <span class="label">Current Value:</span>
-            <span class="value">{{ formatCurrency(userInvestment.currentValue) }}</span>
+            <span class="label">Unrealized P&L</span>
+            <span class="value" :class="pnlClass(strategy.unrealized_pnl)">
+              {{ formatCurrency(strategy.unrealized_pnl) }}
+            </span>
           </div>
           <div class="detail-item">
-            <span class="label">Profit/Loss:</span>
-            <span class="value" :class="pnlClass(userInvestment.pnl)">{{ formatCurrency(userInvestment.pnl) }}</span>
+            <span class="label">Status</span>
+            <span class="value">{{ strategy.is_active ? 'Active' : 'Inactive' }}</span>
           </div>
-           <div class="detail-item">
-            <span class="label">Investment Date:</span>
-            <span class="value">{{ userInvestment.date }}</span>
+          <div class="detail-item">
+            <span class="label">Created</span>
+            <span class="value">{{ new Date(strategy.created_at).toLocaleDateString() }}</span>
           </div>
         </div>
-      </section>
-
-      <div class="actions">
-        <button v-if="!isInvested" @click="investInStrategy" class="btn btn-primary">Invest in this Strategy</button>
-        <button v-if="isInvested" @click="modifyInvestment" class="btn btn-secondary">Modify Investment</button>
-        <NuxtLink to="/strategies" class="btn btn-outline">Back to All Strategies</NuxtLink>
       </div>
 
+      <div class="actions">
+        <button v-if="!hasInvestment" class="btn btn-primary" @click="investInStrategy">
+          Invest Now
+        </button>
+        <button v-else class="btn btn-outline" @click="modifyInvestment">
+          Modify Investment
+        </button>
+      </div>
     </div>
+
     <div v-else>
       <p>Loading strategy details or strategy not found...</p>
     </div>
@@ -69,89 +70,61 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
-const strategyId = computed(() => route.params.id as string);
+const strategyId = computed(() => route.params.id as string)?.value;
 
 interface Strategy {
-  id: string;
+  id: number;
   name: string;
+  run_tf: string;
   description: string;
-  riskLevel: 'High' | 'Medium-High' | 'Medium' | 'Low';
-  assetClass: string;
-  minInvestment: number;
-  expectedReturn: string; // Can be a range like "15-25"
-}
-
-interface UserInvestment {
-  investedAmount: number;
-  currentValue: number;
+  capital: number;
+  capital_remaining: number;
+  capital_used: number;
+  units: number;
   pnl: number;
-  date: string;
+  unrealized_pnl: number;
+  is_active: boolean;
+  created_at: string;
 }
 
-// --- Mock Data ---
-// In a real application, this data would be fetched from an API based on strategyId.value
-const allStrategiesData: Record<string, Strategy> = {
-  'strategy001': {
-    id: 'strategy001',
-    name: 'Aggressive Growth Alpha',
-    description: 'Aims for high capital appreciation by investing in volatile growth stocks and derivatives. Suitable for investors with a high risk tolerance.',
-    riskLevel: 'High',
-    assetClass: 'Equities, Derivatives',
-    minInvestment: 5000,
-    expectedReturn: '15-25'
-  },
-  'strategy002': {
-    id: 'strategy002',
-    name: 'Stable Income Beta',
-    description: 'Focuses on generating consistent income through investments in bonds, dividend stocks, and REITs. Lower risk profile.',
-    riskLevel: 'Low',
-    assetClass: 'Fixed Income, Equities (Dividend)',
-    minInvestment: 10000,
-    expectedReturn: '4-7'
-  },
-  'strategy003': {
-    id: 'strategy003',
-    name: 'Tech Opportunities Gamma',
-    description: 'Invests in a diversified portfolio of technology companies, from established leaders to emerging innovators.',
-    riskLevel: 'Medium-High',
-    assetClass: 'Equities (Technology Sector)',
-    minInvestment: 7500,
-    expectedReturn: '10-18'
-  },
-  'strategy004': {
-    id: 'strategy004',
-    name: 'Global Diversified Delta',
-    description: 'Offers broad diversification across global equity and bond markets to balance risk and reward.',
-    riskLevel: 'Medium',
-    assetClass: 'Global Equities, Global Bonds',
-    minInvestment: 12000,
-    expectedReturn: '7-12'
+interface StrategyRes {
+  is_error: boolean;
+  is_success: boolean;
+  message?: string;
+  data?: Strategy;
+}
+
+const strategy = ref<Strategy | null | undefined>(null);
+
+async function fetchStrategyById(id: number) {
+
+  const runtimeConfig = useRuntimeConfig();
+  const baseUrl = runtimeConfig.public.baseUrl;
+
+  try {
+    const url = `${baseUrl}/strategies/${id}`;
+    const res: StrategyRes = await $fetch(url, {
+      method: "GET",
+    });
+
+    if (res.is_error) {
+      throw new Error(res.message || "Error fetching user data");
+    }
+
+    return res.data as Strategy;
+
+  } catch (error) {
+    console.error("Error fetching user:", error);
   }
-};
+}
 
-// Mock data for user's investment in this specific strategy
-const userInvestmentsData: Record<string, UserInvestment> = {
-    'strategy001': { investedAmount: 25000, currentValue: 27500, pnl: 2500, date: '2023-01-15' },
-    'strategy002': { investedAmount: 30000, currentValue: 31500.75, pnl: 1500.75, date: '2022-11-20' },
-};
-// --- End Mock Data ---
-
-const strategy = ref<Strategy | null>(null);
-const userInvestment = ref<UserInvestment | null>(null);
-
-const isInvested = computed(() => !!userInvestment.value);
-
-onMounted(() => {
-  // Simulate API call
-  setTimeout(() => {
-    strategy.value = allStrategiesData[strategyId.value] || null;
-    userInvestment.value = userInvestmentsData[strategyId.value] || null;
-  }, 200);
+onMounted(async () => {
+  strategy.value = await fetchStrategyById(parseInt(strategyId));
 });
 
 const formatCurrency = (value: number) => {
   if (typeof value !== 'number') return 'N/A';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'INR' }).format(value);
 };
 
 const pnlClass = (pnl: number) => {
@@ -160,6 +133,8 @@ const pnlClass = (pnl: number) => {
   if (pnl < 0) return 'pnl-negative';
   return 'pnl-neutral';
 };
+
+const hasInvestment = ref(false); // This should be determined by API call
 
 const investInStrategy = () => {
   alert(`Investing in ${strategy.value?.name}... (Placeholder)`);
@@ -182,12 +157,13 @@ definePageMeta({
   background-color: #ffffff;
   border-radius: 8px;
   margin: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 h1 {
   font-size: 2.2em;
-  color: #1A237E; /* Deep Indigo */
+  color: #1A237E;
+  /* Deep Indigo */
   margin-bottom: 10px;
 }
 
@@ -228,21 +204,32 @@ h1 {
   color: #333;
 }
 
-.performance-section, .investment-details-section {
+.performance-section,
+.investment-details-section {
   margin-bottom: 30px;
 }
 
-.performance-section h2, .investment-details-section h2 {
+.performance-section h2,
+.investment-details-section h2 {
   font-size: 1.6em;
-  color: #283593; /* Indigo */
+  color: #283593;
+  /* Indigo */
   margin-bottom: 15px;
   padding-bottom: 10px;
   border-bottom: 1px solid #eee;
 }
 
-.pnl-positive { color: #2E7D32; }
-.pnl-negative { color: #C62828; }
-.pnl-neutral { color: #555; }
+.pnl-positive {
+  color: #2E7D32;
+}
+
+.pnl-negative {
+  color: #C62828;
+}
+
+.pnl-neutral {
+  color: #555;
+}
 
 .actions {
   margin-top: 30px;
@@ -262,18 +249,23 @@ h1 {
 }
 
 .btn-primary {
-  background-color: #FFC107; /* Amber */
+  background-color: #FFC107;
+  /* Amber */
   color: #333;
   font-weight: bold;
 }
+
 .btn-primary:hover {
-  background-color: #FFB300; /* Darker Amber */
+  background-color: #FFB300;
+  /* Darker Amber */
 }
 
 .btn-secondary {
-  background-color: #3949AB; /* Indigo */
+  background-color: #3949AB;
+  /* Indigo */
   color: white;
 }
+
 .btn-secondary:hover {
   background-color: #283593;
 }
@@ -283,7 +275,9 @@ h1 {
   border-color: #3949AB;
   color: #3949AB;
 }
+
 .btn-outline:hover {
-  background-color: #e8eaf6; /* Light Indigo */
+  background-color: #e8eaf6;
+  /* Light Indigo */
 }
 </style>

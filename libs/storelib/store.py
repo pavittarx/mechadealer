@@ -71,24 +71,6 @@ class Store:
             print(f"Error creating strategy: {e}")
             raise
 
-    def get_strategy(
-        self, strategy_id: int | None = None, strategy_name: str | None = None
-    ):
-        if not strategy_id and not strategy_name:
-            raise ValueError("Either strategy_id or strategy_name must be provided")
-
-        try:
-            with self._get_conn() as conn:
-                query = strategies.select().where(
-                    (strategies.c.id == strategy_id)
-                    | (strategies.c.name == strategy_name)
-                )
-                result = conn.execute(query).fetchone()
-                return result
-        except SQLAlchemyError as e:
-            print(f"Error fetching strategy: {e}")
-            raise
-
     def invest_in_strategy(self, strategy_id: int, user_id: int, amount: float):
         if not amount or amount <= 0:
             raise ValueError("Amount must be greater than 0")
@@ -410,6 +392,24 @@ class Store:
                 if self._conn is None:  # Only rollback if we own the connection
                     conn.rollback()
                 raise
+
+    def get_strategy(
+        self, strategy_id: int | None = None, strategy_name: str | None = None
+    ):
+        if not strategy_id and not strategy_name:
+            raise ValueError("Either strategy_id or strategy_name must be provided")
+
+        try:
+            with self._get_conn() as conn:
+                query = strategies.select().where(
+                    (strategies.c.id == strategy_id)
+                    | (strategies.c.name == strategy_name)
+                )
+                result = conn.execute(query).fetchone()
+                return result
+        except SQLAlchemyError as e:
+            print(f"Error fetching strategy: {e}")
+            raise
 
     def get_strategies(self):
         try:

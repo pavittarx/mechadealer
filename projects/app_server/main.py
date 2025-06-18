@@ -209,3 +209,26 @@ def get_strategies():
             "message": str(e),
             "data": None,
         }
+
+
+@app.get("/strategies/{strategy_id}")
+def get_strategy_by_id(strategy_id: int):
+    try:
+        res = store.get_strategy(strategy_id)
+
+        if not res:
+            raise Exception("Strategy not found")
+
+        return {
+            "is_error": False,
+            "is_success": True,
+            "message": "Strategy fetched successfully",
+            "data": res._mapping,
+        }
+    except Exception as e:
+        return {
+            "is_error": True,
+            "is_success": False,
+            "message": str(e),
+            "data": None,
+        }
