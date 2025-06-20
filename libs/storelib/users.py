@@ -78,7 +78,7 @@ class Users:
                 username=result.username,
                 capital=result.capital,
                 capital_remaining=result.capital_remaining,
-                # created_at=result.created_at,
+                capital_used=result.capital_used,
             )
         else:
             print("User Not found")

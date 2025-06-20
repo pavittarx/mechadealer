@@ -42,6 +42,11 @@ class RegisterReq(BaseModel):
     name: str
 
 
+class ReqInvestIntoStrategy(BaseModel):
+    strategy_id: int
+    amount: float
+
+
 TokenData = TypedDict(
     "TokenData",
     {
@@ -201,6 +206,74 @@ def get_strategies():
             "is_success": True,
             "message": "Strategies fetched successfully",
             "data": res,
+        }
+    except Exception as e:
+        return {
+            "is_error": True,
+            "is_success": False,
+            "message": str(e),
+            "data": None,
+        }
+
+
+@app.post("/strategies/invest")
+def invest_into_strategy(
+    Authorization: Annotated[str | None, Header(convert_underscores=False)],
+    req: ReqInvestIntoStrategy,
+):
+    try:
+        if not Authorization:
+            raise Exception("Authorization header is missing")
+
+        token = Authorization.split(" ")[1]
+        data = decode_jwt(token)
+
+        strategy = store.get_user_strategies(req.strategy_id)
+
+        if not strategy:
+            raise Exception("Strategy not found")
+
+        store.invest_in_strategy(data["user_id"], req.strategy_id, req.amount)
+
+        return {
+            "is_error": False,
+            "is_success": True,
+            "message": "Amount added to strategy successfully",
+            "data": None,
+        }
+    except Exception as e:
+        return {
+            "is_error": True,
+            "is_success": False,
+            "message": str(e),
+            "data": None,
+        }
+
+
+@app.post("/strategies/withdraw")
+def wothdraw_from_strategy(
+    Authorization: Annotated[str | None, Header(convert_underscores=False)],
+    req: ReqInvestIntoStrategy,
+):
+    try:
+        if not Authorization:
+            raise Exception("Authorization header is missing")
+
+        token = Authorization.split(" ")[1]
+        data = decode_jwt(token)
+
+        strategy = store.get_user_strategies(req.strategy_id)
+
+        if not strategy:
+            raise Exception("Strategy not found")
+
+        store.withdraw_from_strategy(data["user_id"], req.strategy_id, req.amount)
+
+        return {
+            "is_error": False,
+            "is_success": True,
+            "message": "Amount added to strategy successfully",
+            "data": None,
         }
     except Exception as e:
         return {

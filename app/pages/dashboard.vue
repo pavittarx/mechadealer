@@ -38,7 +38,7 @@
             <p><strong>Invested:</strong> {{ formatCurrency(strategy.capital) }}</p>
             <p><strong>Current Value:</strong> {{ formatCurrency(strategy.capital_used) }}</p>
             <p><strong>P&L:</strong> <span :class="pnlClass(strategy.pnl)">{{ formatCurrency(strategy.unrealized_pnl)
-            }}</span></p>
+                }}</span></p>
           </div>
         </div>
       </section>
