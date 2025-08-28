@@ -11,5 +11,3 @@ dependencies = [
     "storelib",
 ]
 
-[tool.uv.sources]
-storelib = { workspace = true }

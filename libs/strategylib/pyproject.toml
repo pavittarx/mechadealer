@@ -6,10 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["datastore", "kafkalib>=0.1.2", "storelib"]
 
-[tool.uv.sources]
-datastore = { workspace = true }
-storelib = { workspace = true }
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

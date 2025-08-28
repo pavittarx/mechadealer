@@ -13,8 +13,3 @@ dependencies = [
     "storelib",
 ]
 
-[tool.uv.sources]
-datastore = { workspace = true }
-storelib = { workspace = true }
-coreutils = { workspace = true }
-brokerlib = { workspace = true }

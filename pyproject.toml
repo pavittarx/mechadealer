@@ -1,15 +1,9 @@
 [project]
 dependencies = [
-  "brokerlib",
-  "coreutils",
-  "datastore",
   "kafka",
-  "kafkalib",
   "pendulum>=3.0.0",
   "pydantic>=2.10.6",
   "python-dotenv>=1.1.0",
-  "storelib",
-  "strategylib",
 ]
 description = "Add your description here"
 name = "mechadealer"
@@ -20,19 +14,16 @@ version = "0.1.0"
 [tool.uv.workspace]
 members = [
   "projects/*",
-  "libs/datastore",
-  "libs/storelib",
-  "libs/coreutils",
-  "libs/strategylib", "libs/brokerlib",
+  "libs/*",
 ]
 
 [tool.uv.sources]
-datastore = { workspace = true }
-kafkalib = { path = "libs/kafkalib", editable = true }
-storelib = { workspace = true }
-coreutils = { workspace = true }
-strategylib = { workspace = true }
 brokerlib = { workspace = true }
+coreutils = { workspace = true }
+datastore = { workspace = true }
+kafkalib = { workspace = true }
+storelib = { workspace = true }
+strategylib = { workspace = true }
 
 [dependency-groups]
 dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]
@@ -40,3 +31,10 @@ dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]
 [tool.pyright]
 reportMissingTypeArgument = true
 strictListInference = true
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []

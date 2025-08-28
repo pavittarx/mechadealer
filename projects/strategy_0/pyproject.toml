@@ -13,9 +13,6 @@ dependencies = [
     "strategylib",
 ]
 
-[tool.uv.sources]
-strategylib = { workspace = true }
-
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
