@@ -1,10 +1,7 @@
 [project]
-dependencies = [
-  "kafka",
-  "pendulum>=3.0.0",
-  "pydantic>=2.10.6",
-  "python-dotenv>=1.1.0",
-]
+# Project dependencies are defined in the individual workspace members (in libs/ and projects/).
+# `uv` will collect and resolve them from there.
+dependencies = []
 description = "Add your description here"
 name = "mechadealer"
 readme = "README.md"
@@ -26,7 +23,16 @@ storelib = { workspace = true }
 strategylib = { workspace = true }
 
 [dependency-groups]
-dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]
+dev = [
+    "pyright>=1.1.398",
+    "ruff>=0.11.2",
+    "typing>=3.10.0.0",
+    "poethepoet>=0.27.0",
+]
+
+[tool.poe.tasks]
+datasync = "uv run --package datasync -- python projects/datasync/main.py"
+app-server = "uv run --package app-server -- uvicorn projects.app_server.main:app --reload --port 8000"
 
 [tool.pyright]
 reportMissingTypeArgument = true
