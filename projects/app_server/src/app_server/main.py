@@ -333,7 +333,7 @@ def wothdraw_from_strategy(
         return {
             "is_error": False,
             "is_success": True,
-            "message": "Amount added to strategy successfully",
+            "message": "Amount withdrawn from strategy successfully",
             "data": None,
         }
     except Exception as e:
