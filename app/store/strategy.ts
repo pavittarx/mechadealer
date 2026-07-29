@@ -5,7 +5,6 @@ type StrategiesData = {
   units: number;
   unrealized_pnl: number;
   capital: number;
-  capital_remaining: number;
   capital_used: number;
   description: string;
   is_active: boolean;

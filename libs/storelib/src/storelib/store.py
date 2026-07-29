@@ -66,7 +66,6 @@ class Store:
                         run_tf=strategy.run_tf,
                         capital=strategy.capital,
                         capital_used=strategy.capital_used,
-                        capital_remaining=strategy.capital_remaining,
                         leverage=strategy.leverage,
                         pnl=strategy.pnl,
                         unrealized_pnl=strategy.unrealized_pnl,
@@ -123,7 +122,6 @@ class Store:
                     .values(
                         capital=user.capital - amount,
                         capital_used=user.capital_used + amount,
-                        capital_remaining=user.capital_remaining - amount,
                     )
                 )
 
@@ -133,7 +131,6 @@ class Store:
                     .values(
                         units=strategy.units + units_to_be_allotted,
                         capital=strategy.capital + amount,
-                        capital_remaining=strategy.capital_remaining + amount,
                     )
                 )
 
@@ -225,7 +222,10 @@ class Store:
                 query_add_transaction = user_transactions.insert().values(
                     user_id=user_id,
                     amount=amount,
-                    type="withdraw",
+                    # The check constraint permits only 'deposit' and
+                    # 'withdrawl'. This wrote "withdraw", so every strategy
+                    # withdrawal failed on CheckViolation.
+                    type="withdrawl",
                     strategy_id=strategy_id,
                     units_allotted=units_to_be_withdrawn,
                     created_at="now()",
@@ -237,7 +237,6 @@ class Store:
                     .values(
                         capital=user.capital + amount,
                         capital_used=user.capital_used - amount,
-                        capital_remaining=user.capital_remaining + amount,
                     )
                 )
 
@@ -247,7 +246,6 @@ class Store:
                     .values(
                         units=strategy.units - units_to_be_withdrawn,
                         capital=strategy.capital - amount,
-                        capital_remaining=strategy.capital_remaining - amount,
                     )
                 )
 

@@ -57,7 +57,6 @@ class StrategyBuilder:
                     description="",
                     run_tf=run_tf,
                     capital=0,
-                    capital_remaining=0,
                 )
             )
 

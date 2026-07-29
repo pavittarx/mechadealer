@@ -9,7 +9,6 @@ type UserResponse = {
     is_active: boolean;
     is_verified: boolean;
     capital: number;
-    capital_remaining: number;
     capital_used: number;
   };
 };
@@ -21,7 +20,6 @@ type UserStrategiesData = {
   units: number;
   unrealized_pnl: number;
   capital: number;
-  capital_remaining: number;
   capital_used: number;
   description: string;
   is_active: boolean;
@@ -45,7 +43,6 @@ export const useUserStore = defineStore("userStore", {
     is_active: false,
     is_verified: false,
     capital: 0,
-    capital_remaining: 0,
     capital_used: 0,
     strategies: [] as UserStrategiesData[],
   }),
@@ -87,7 +84,6 @@ export const useUserStore = defineStore("userStore", {
         this.is_active = res.data.is_active;
         this.is_verified = res.data.is_verified;
         this.capital = res.data.capital;
-        this.capital_remaining = res.data.capital_remaining;
         this.capital_used = res.data.capital_used;
         console.log("User data fetched successfully:", res);
       } catch (error) {

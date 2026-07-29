@@ -103,6 +103,10 @@ if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="do
 $DC --env-file .env -f containers/docker-compose.yaml logs -f
 """
 
+[tool.poe.tasks.migrate]
+help = "Apply pending SQL migrations"
+cmd = "python -m storelib.migrate"
+
 [tool.poe.tasks.lint]
 help = "Lint with ruff"
 cmd = "ruff check ."

@@ -32,12 +32,6 @@
             </dd>
           </div>
           <div class="cell">
-            <dt class="spec">Idle</dt>
-            <dd class="figure cell-value">
-              {{ formatCurrency(strategy.capital_remaining) }}
-            </dd>
-          </div>
-          <div class="cell">
             <dt class="spec">Units issued</dt>
             <dd class="figure cell-value">{{ formatUnits(strategy.units) }}</dd>
           </div>
@@ -168,7 +162,6 @@ interface Strategy {
   run_tf: string;
   description: string;
   capital: number;
-  capital_remaining: number;
   capital_used: number;
   units: number;
   pnl: number;

@@ -149,7 +149,9 @@ def on_entry_signal(signal: SignalEvent):
             )
             return
 
-        balance = strategy.capital_remaining
+        # capital is the strategy's pool, which is what capital_remaining always
+        # held: nothing decremented that column when an order deployed capital.
+        balance = strategy.capital
         if balance is None or balance <= 0:
             logger.error(
                 "[ENTRY] Insufficient balance in strategy.",

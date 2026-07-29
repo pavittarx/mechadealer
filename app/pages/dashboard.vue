@@ -95,10 +95,9 @@ import { useUserStore } from "@/store/user";
 const userStore = useUserStore();
 
 /**
- * `capital` holds uninvested cash: allocating to a strategy decrements it.
- * `capital_remaining` is decremented identically, so it carries no extra
- * information. Showing `capital` as the total made the three figures fail to
- * reconcile -- allocated plus available exceeded it.
+ * `capital` holds uninvested cash: allocating to a strategy decrements it, and
+ * `capital_used` holds the allocated side. Showing `capital` alone as the total
+ * made the figures fail to reconcile.
  */
 const totalCapital = computed(
   () => Number(userStore.capital ?? 0) + Number(userStore.capital_used ?? 0),

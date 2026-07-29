@@ -10,7 +10,6 @@ class User(BaseModel):
     name: str
     capital: float = Field(default=0)
     capital_used: float = Field(default=0)
-    capital_remaining: float = Field(default=0)
     is_active: bool = Field(default=False)
     is_verified: bool = Field(default=False)
     created_at: str = Field(default="now()")
@@ -32,7 +31,6 @@ class Strategy(BaseModel):
     run_tf: str
     capital: float
     capital_used: float = Field(default=0)
-    capital_remaining: float
     leverage: float = Field(default=1)
     pnl: float = Field(default=0)
     unrealized_pnl: float = Field(default=0)

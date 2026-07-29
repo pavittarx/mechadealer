@@ -82,7 +82,6 @@ class Users:
                 name=result.name,
                 username=result.username,
                 capital=result.capital,
-                capital_remaining=result.capital_remaining,
                 capital_used=result.capital_used,
             )
         else:
@@ -119,7 +118,6 @@ class Users:
                     .where(users.c.id == user_id)
                     .values(
                         capital=users.c.capital + (sign * amount),
-                        capital_remaining=users.c.capital_remaining + (sign * amount),
                     )
                 )
                 conn.execute(user_update)
