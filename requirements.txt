@@ -1,0 +1,6 @@
+# Vercel builds the API function from this file (uv workspaces are not
+# understood by pip). Order matters: storelib is installed first so that
+# app_server's dependency on it is already satisfied and pip does not try to
+# resolve the name against PyPI.
+./libs/storelib
+./projects/app_server

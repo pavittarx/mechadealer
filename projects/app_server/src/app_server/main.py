@@ -28,14 +28,25 @@ CORS_ORIGINS = [
 ]
 
 
+# Creating the schema on startup is convenient locally but wasteful where the
+# process starts per request, so it can be turned off once the schema exists.
+INIT_DB_ON_STARTUP = os.getenv("INIT_DB_ON_STARTUP", "1").lower() not in {
+    "0",
+    "false",
+    "no",
+}
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if not JWT_SECRET:
         raise RuntimeError("JWT_SECRET is not set in the environment variables.")
 
-    # storelib no longer issues DDL on import, so the service asks for it.
-    init_db()
-    logger.info("[app_server]: schema ready")
+    if INIT_DB_ON_STARTUP:
+        # storelib no longer issues DDL on import, so the service asks for it.
+        init_db()
+        logger.info("[app_server]: schema ready")
+
     yield
 
 
@@ -89,6 +100,23 @@ def _jwt_secret() -> str:
         raise RuntimeError("JWT_SECRET is not set in the environment variables.")
 
     return JWT_SECRET
+
+
+def _bearer_token(header: str | None) -> str:
+    """Pull the token out of an Authorization header.
+
+    `header.split(" ")[1]` raised IndexError on a malformed header, which
+    surfaced to the client as "list index out of range".
+    """
+    if not header:
+        raise ValueError("Authorization header is missing")
+
+    scheme, _, token = header.partition(" ")
+
+    if scheme.lower() != "bearer" or not token.strip():
+        raise ValueError("Authorization header must be a Bearer token")
+
+    return token.strip()
 
 
 def encode_jwt(data: Dict[str, int | str]) -> str:
@@ -171,10 +199,7 @@ def get_user_strategies(
     Authorization: Annotated[str | None, Header(convert_underscores=False)],
 ):
     try:
-        if not Authorization:
-            raise Exception("Authorization header is missing")
-
-        token = Authorization.split(" ")[1]
+        token = _bearer_token(Authorization)
         data = decode_jwt(token)
 
         res = store.get_user_strategies(data["user_id"])
@@ -202,10 +227,7 @@ async def get_user(
     Authorization: Annotated[str | None, Header(convert_underscores=False)],
 ):
     try:
-        if not Authorization:
-            raise Exception("Authorization header is missing")
-
-        token = Authorization.split(" ")[1]
+        token = _bearer_token(Authorization)
         data = decode_jwt(token)
 
         res = users.get_user(data["user_id"])
@@ -259,10 +281,7 @@ def invest_into_strategy(
     req: ReqInvestIntoStrategy,
 ):
     try:
-        if not Authorization:
-            raise Exception("Authorization header is missing")
-
-        token = Authorization.split(" ")[1]
+        token = _bearer_token(Authorization)
         data = decode_jwt(token)
 
         strategy = store.get_strategy(strategy_id=req.strategy_id)
@@ -297,10 +316,7 @@ def wothdraw_from_strategy(
     req: ReqInvestIntoStrategy,
 ):
     try:
-        if not Authorization:
-            raise Exception("Authorization header is missing")
-
-        token = Authorization.split(" ")[1]
+        token = _bearer_token(Authorization)
         data = decode_jwt(token)
 
         strategy = store.get_strategy(strategy_id=req.strategy_id)

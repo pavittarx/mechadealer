@@ -1,0 +1,25 @@
+# The API function only needs storelib and app_server (see requirements.txt).
+# Everything else is either the frontend, local infrastructure, or unused by
+# the deployed function.
+app/
+containers/
+docs/
+tests/
+.github/
+libs/brokerlib/
+libs/coreutils/
+libs/datastore/
+libs/kafkalib/
+libs/strategylib/
+projects/datasync/
+projects/orders_management/
+projects/stats_handler/
+projects/strategy_0/
+uv.lock
+
+# Hide the workspace root from Vercel's Python builder: it prefers `uv lock`
+# when a root pyproject.toml exists, which fails because tool.uv.sources
+# references members this deployment deliberately excludes. Leading slash so
+# the member manifests under libs/ and projects/ are still uploaded.
+/pyproject.toml
+.venv/
