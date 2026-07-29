@@ -26,7 +26,12 @@ export default defineNuxtConfig({
   },
   security: {
     corsHandler: {
-      origin: ["http://localhost:3000", "http://localhost:8000"],
+      // NUXT_PUBLIC_BASE_URL already overrides runtimeConfig.public.baseUrl at
+      // runtime; this list is not auto-overridable, so it reads env directly.
+      origin: (
+        process.env.NUXT_CORS_ORIGINS ??
+        "http://localhost:3000,http://localhost:8000"
+      ).split(","),
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
       exposeHeaders: ["Content-Length", "X-Total-Count"],
