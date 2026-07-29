@@ -196,7 +196,7 @@ async def login(req: Login):
 
 @app.get("/user/strategies")
 def get_user_strategies(
-    Authorization: Annotated[str | None, Header(convert_underscores=False)],
+    Authorization: Annotated[str | None, Header(convert_underscores=False)] = None,
 ):
     try:
         token = _bearer_token(Authorization)
@@ -224,7 +224,7 @@ def get_user_strategies(
 
 @app.get("/user/{user_id}")
 async def get_user(
-    Authorization: Annotated[str | None, Header(convert_underscores=False)],
+    Authorization: Annotated[str | None, Header(convert_underscores=False)] = None,
 ):
     try:
         token = _bearer_token(Authorization)
@@ -277,8 +277,8 @@ def get_strategies():
 
 @app.post("/strategies/invest")
 def invest_into_strategy(
-    Authorization: Annotated[str | None, Header(convert_underscores=False)],
     req: ReqInvestIntoStrategy,
+    Authorization: Annotated[str | None, Header(convert_underscores=False)] = None,
 ):
     try:
         token = _bearer_token(Authorization)
@@ -312,8 +312,8 @@ def invest_into_strategy(
 
 @app.post("/strategies/withdraw")
 def wothdraw_from_strategy(
-    Authorization: Annotated[str | None, Header(convert_underscores=False)],
     req: ReqInvestIntoStrategy,
+    Authorization: Annotated[str | None, Header(convert_underscores=False)] = None,
 ):
     try:
         token = _bearer_token(Authorization)
