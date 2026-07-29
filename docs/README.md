@@ -8,4 +8,4 @@
 4. [Code Standards](./code-standards.md)
 5. [Testing](./testing.md)
 6. [Security Measures](./security-measures.md)
-7. [Final Notes](./final-notes.md)
+7. [Final Notes](./end-notes.md)
