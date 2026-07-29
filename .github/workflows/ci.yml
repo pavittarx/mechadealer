@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.14 is blocked upstream: quixstreams caps confluent-kafka<2.12 and
+        # that range has no cp314 wheels.
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --frozen --python ${{ matrix.python }}
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Type-check
+        run: uv run pyright
+
+      - name: Test
+        # No env vars and no services: importing anything must not need them.
+        run: uv run pytest -q
+
+  wheels:
+    name: Libraries build and install standalone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build every library wheel
+        run: |
+          for lib in coreutils datastore kafkalib storelib strategylib brokerlib; do
+            uv build --wheel "libs/$lib" -o dist
+          done
+
+      - name: Import each wheel from a clean environment
+        # Guards the packaging regression: the libraries used to import only
+        # because their source roots were on sys.path via editable installs.
+        run: |
+          uv venv /tmp/clean -p 3.12
+          uv pip install --python /tmp/clean dist/*.whl
+          cd /tmp
+          /tmp/clean/bin/python -c "
+          import coreutils, datastore, kafkalib, storelib, strategylib, brokerlib
+          print('all libraries import from wheels')
+          "
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Build
+        run: bun run build
