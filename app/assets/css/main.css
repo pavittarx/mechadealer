@@ -1,24 +1,233 @@
-/* Global styles for the application */
+/* ==========================================================================
+   mechadealer — instrument panel
+   A machine you hand money to. Reads like precision instrumentation:
+   measured rules, spec-sheet labels, figures set in tabular mono.
+   Green and red are reserved for market direction and nothing else.
+   ========================================================================== */
+
+:root {
+  /* Surface */
+  --panel: #e7e4dd;      /* machined warm grey */
+  --panel-sunk: #dedbd3; /* recessed wells */
+  --panel-raised: #f2f0eb;
+  --ink: #15181b;        /* graphite */
+  --ink-soft: #232a30;
+
+  /* Text */
+  --text: #15181b;
+  --text-muted: #6c727a;
+  --text-inverse: #e7e4dd;
+  --text-inverse-muted: #9aa1a8;
+
+  /* Structure */
+  --rule: #cbc7be;
+  --rule-strong: #a9a49a;
+
+  /* Brand — carried from the candlesticks in the logo */
+  --brand: #16375c;
+  --brand-bright: #24568c;
+
+  /* Market direction. Never used decoratively. */
+  --long: #14663f;
+  --short: #a6301c;
+
+  /* Type */
+  --font-display: "Archivo", system-ui, sans-serif;
+  --font-body: "Instrument Sans", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Measure */
+  --rail-w: 15rem;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --max: 78rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
 
 body {
-  font-family: sans-serif;
   margin: 0;
-  padding: 0;
-  background-color: #f4f4f4;
-  color: #333;
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
+/* --- Type ---------------------------------------------------------------- */
 
 h1,
 h2,
 h3,
-h4,
-h5,
-h6 {
-  color: #111;
+h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-stretch: 112%;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  margin: 0;
+  color: var(--text);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 125%;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+}
+
+/* Spec-sheet micro label. Names the quantity below it, nothing more. */
+.spec {
+  font-family: var(--font-data);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+/* Every figure here is money, units, or a count.
+   Tabular, so columns of them line up down the page. */
+.figure {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+
+.long { color: var(--long); }
+.short { color: var(--short); }
+.flat { color: var(--text-muted); }
+
+/* --- Signature: the tick scale ------------------------------------------
+   A hairline carrying measurement ticks — the price axis of a chart and the
+   edge of a ruler are the same mark. It divides sections and edges the
+   navigation rail, so the interface always reads as something calibrated.
+   ------------------------------------------------------------------------ */
+
+.tickrule {
+  height: 0.625rem;
+  border-top: 1px solid var(--rule-strong);
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--rule-strong) 0 1px,
+    transparent 1px 0.5rem
+  );
+  background-repeat: repeat-x;
+  background-size: 0.5rem 0.25rem;
+  background-position: top left;
+}
+
+.tickrule--major {
+  height: 0.75rem;
+  background-image:
+    repeating-linear-gradient(to right, var(--rule-strong) 0 1px, transparent 1px 2.5rem),
+    repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px 0.5rem);
+  background-size: 2.5rem 0.625rem, 0.5rem 0.25rem;
+}
+
+.tickrule--inverse {
+  border-top-color: #3a4249;
+  background-image: repeating-linear-gradient(
+    to right,
+    #3a4249 0 1px,
+    transparent 1px 0.5rem
+  );
+}
+
+/* --- Controls ------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8125rem 1.5rem;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--text-inverse);
+}
+
+.btn-primary:hover {
+  background: var(--brand);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--rule-strong);
+}
+
+.btn-outline:hover {
+  border-color: var(--ink);
+  background: var(--panel-raised);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.input {
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  background: var(--panel-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  font-family: var(--font-data);
+  font-size: 1rem;
+  color: var(--text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(22, 55, 92, 0.15);
+}
+
+/* --- Accessibility floor -------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

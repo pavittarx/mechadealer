@@ -1,206 +1,231 @@
 <template>
-  <div class="login-page-wrapper">
-    <div class="login-container">
-      <img src="/mechadealer_logo.png" alt="Mechadealer Logo" class="logo">
-      <h1>Member Login</h1>
-      <p class="subtitle">Access your Mechadealer account</p>
-      <form @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="username">Username or Email</label>
-          <input type="text" id="username" v-model="username" required placeholder="Enter your username or email" />
-        </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" v-model="password" required placeholder="Enter your password" />
-        </div>
-        <div class="form-actions">
-          <NuxtLink to="/forgot-password" class="forgot-password-link">Forgot Password?</NuxtLink>
-          <button type="submit" class="login-button">Login</button>
-        </div>
-      </form>
-      <p class="signup-link">
-        Don't have an account? <NuxtLink to="/register">Sign Up</NuxtLink>
+  <div class="page">
+    <!-- Left plate carries the identity so the form stays uncluttered. -->
+    <section class="plate">
+      <NuxtLink to="/" class="plate-mark display">mechadealer</NuxtLink>
+      <div class="tickrule tickrule--inverse plate-scale" />
+      <p class="plate-line">
+        Automated strategies on NSE and BSE. You allocate the capital, the
+        machine places the orders.
       </p>
-    </div>
+      <p class="spec plate-foot">Market 09:15–15:30 IST</p>
+    </section>
+
+    <section class="form-side">
+      <div class="form-wrap">
+        <p class="spec">Sign in</p>
+        <h1 class="form-title">Your account</h1>
+
+        <form class="form" novalidate @submit.prevent="handleLogin">
+          <div class="field">
+            <label for="username" class="spec">Username</label>
+            <input
+              id="username"
+              v-model="username"
+              class="input"
+              type="text"
+              autocomplete="username"
+              required
+            >
+          </div>
+
+          <div class="field">
+            <label for="password" class="spec">Password</label>
+            <input
+              id="password"
+              v-model="password"
+              class="input"
+              type="password"
+              autocomplete="current-password"
+              required
+            >
+          </div>
+
+          <p v-if="error" class="error" role="alert">{{ error }}</p>
+
+          <button type="submit" class="btn btn-primary submit" :disabled="pending">
+            {{ pending ? "Signing in…" : "Sign in" }}
+          </button>
+        </form>
+
+        <p class="alt">
+          Try it with the demo account:
+          <span class="figure alt-creds">demo / demo1234</span>
+        </p>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from "vue";
 
-const username = ref('');
-const password = ref('');
-const error = ref('');
+const username = ref("");
+const password = ref("");
+const error = ref("");
+const pending = ref(false);
 
-type LoginRespose = {
+type LoginResponse = {
   is_error: boolean;
   is_success: boolean;
   message: string;
   data: {
     user_id: number;
     token: string;
-  }
-}
+  } | null;
+};
 
 const handleLogin = async () => {
-  const runtimeConfig = useRuntimeConfig()
-  const url = runtimeConfig.public.baseUrl + '/login';
+  const runtimeConfig = useRuntimeConfig();
+  const url = runtimeConfig.public.baseUrl + "/login";
+
+  error.value = "";
+  pending.value = true;
 
   try {
-    const res: LoginRespose = await $fetch(url, {
-      method: 'POST',
+    const res: LoginResponse = await $fetch(url, {
+      method: "POST",
       body: {
         username: username.value,
-        password: password.value
-      }
-    })
+        password: password.value,
+      },
+    });
 
-    if (res.is_error) {
-      error.value = res.message;
+    // The API answers 200 with is_error set. Without returning here the next
+    // line read user_id off a null body and threw, so a wrong password looked
+    // like nothing happening at all.
+    if (res.is_error || !res.data) {
+      error.value = res.message || "Those details did not match an account.";
+      return;
     }
 
     const userStore = useUserStore();
-
     userStore.setUserId(res.data.user_id);
     userStore.setToken(res.data.token);
 
-    console.log('Login Succeessful')
-    navigateTo('/dashboard');
+    navigateTo("/dashboard");
+  } catch (e) {
+    console.error(e);
+    error.value = "Could not reach the server. Try again in a moment.";
+  } finally {
+    pending.value = false;
   }
-  catch (error) {
-    console.log("Error while logging in.");
-    console.error(error);
-  }
-
 };
+
+definePageMeta({
+  layout: "default",
+});
 </script>
 
 <style scoped>
-.login-page-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1A237E 0%, #283593 50%, #3949AB 100%);
-  /* Deep Indigo to Indigo */
-  padding: 20px;
-  font-family: 'Roboto', 'Arial', sans-serif;
 }
 
-.login-container {
-  background-color: #ffffff;
-  padding: 40px;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  width: 100%;
-  max-width: 450px;
-  text-align: center;
-}
+/* --- Identity plate ------------------------------------------------------ */
 
-.logo {
-  max-width: 150px;
-  margin-bottom: 20px;
-}
-
-.login-container h1 {
-  font-size: 2em;
-  color: #1A237E;
-  /* Deep Indigo */
-  margin-bottom: 10px;
-  font-weight: 600;
-}
-
-.subtitle {
-  font-size: 1em;
-  color: #555;
-  margin-bottom: 30px;
-}
-
-.login-form {
-  text-align: left;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-  font-size: 0.95em;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 12px 15px;
-  box-sizing: border-box;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1em;
-  transition: border-color 0.3s ease;
-}
-
-.form-group input:focus {
-  border-color: #3949AB;
-  /* Indigo */
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(57, 73, 171, 0.2);
-}
-
-.form-actions {
+.plate {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  background: var(--ink);
+  color: var(--text-inverse);
+}
+
+.plate-mark {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  color: var(--text-inverse);
+  text-decoration: none;
+}
+
+.plate-scale {
+  margin: 1.5rem 0 auto;
+}
+
+.plate-line {
+  margin: 0;
+  max-width: 24rem;
+  font-size: clamp(1.125rem, 2.2vw, 1.5rem);
+  line-height: 1.4;
+  color: var(--text-inverse);
+}
+
+.plate-foot {
+  margin: 2rem 0 0;
+  color: var(--text-inverse-muted);
+}
+
+/* --- Form ---------------------------------------------------------------- */
+
+.form-side {
+  display: flex;
   align-items: center;
-  margin-top: 10px;
-  margin-bottom: 25px;
+  justify-content: center;
+  padding: clamp(2rem, 5vw, 3.5rem);
 }
 
-.forgot-password-link {
-  font-size: 0.9em;
-  color: #3949AB;
-  /* Indigo */
-  text-decoration: none;
+.form-wrap {
+  width: 100%;
+  max-width: 22rem;
 }
 
-.forgot-password-link:hover {
-  text-decoration: underline;
+.form-title {
+  font-size: 1.875rem;
+  margin: 0.375rem 0 2rem;
 }
 
-.login-button {
-  background-color: #FFC107;
-  /* Amber */
-  color: #333;
-  padding: 12px 25px;
-  border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 1em;
-  font-weight: bold;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-.login-button:hover {
-  background-color: #FFB300;
-  /* Darker Amber */
-  transform: translateY(-1px);
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
 }
 
-.signup-link {
-  margin-top: 25px;
-  font-size: 0.95em;
-  color: #555;
+.submit {
+  margin-top: 0.25rem;
+  width: 100%;
 }
 
-.signup-link a {
-  color: #FFC107;
-  /* Amber */
-  font-weight: bold;
-  text-decoration: none;
+.error {
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--short);
+  color: var(--short);
+  font-size: 0.875rem;
 }
 
-.signup-link a:hover {
-  text-decoration: underline;
+.alt {
+  margin: 2rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.alt-creds {
+  color: var(--text);
+}
+
+@media (max-width: 52rem) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .plate {
+    padding-bottom: 2rem;
+  }
+
+  .plate-scale {
+    margin-bottom: 1.5rem;
+  }
+
+  .plate-foot {
+    display: none;
+  }
 }
 </style>

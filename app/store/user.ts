@@ -57,8 +57,9 @@ export const useUserStore = defineStore("userStore", {
       this.token = token;
     },
     async fetchUser() {
-      if (!this.userId) {
-        console.error("Unable to fetch user, UserId not present.");
+      // Both are needed: the request is signed with the token, so guarding on
+      // userId alone sent a doomed call from every signed-out page.
+      if (!this.userId || !this.token) {
         return;
       }
 
@@ -94,8 +95,7 @@ export const useUserStore = defineStore("userStore", {
       }
     },
     async fetchUserStrategies() {
-      if (!this.userId) {
-        console.error("Unable to fetch user holdings, UserId not present.");
+      if (!this.userId || !this.token) {
         return;
       }
 

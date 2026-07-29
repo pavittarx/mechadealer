@@ -1,221 +1,304 @@
 <template>
-  <div class="dashboard-page-wrapper">
-    <div class="dashboard-container">
-      <header class="dashboard-header">
-        <h1>Dashboard</h1>
-        <div class="user-details">
-          <p><strong>User:</strong> {{ userStore.name }} {{ userStore?.email ? `(${userStore.email})` : "" }}</p>
-        </div>
-      </header>
+  <div class="page">
+    <header class="head">
+      <div>
+        <p class="spec">Account</p>
+        <h1 class="head-name">{{ userStore.name || "—" }}</h1>
+      </div>
+      <p class="spec head-meta">
+        {{ userStore.strategies.length }}
+        {{ userStore.strategies.length === 1 ? "position" : "positions" }}
+      </p>
+    </header>
 
-      <section class="capital-summary-section">
-        <h2>Capital Overview</h2>
-        <div class="capital-grid">
-          <div class="capital-item">
-            <span class="label">Total Capital</span>
-            <span class="value">{{ formatCurrency(userStore.capital) }}</span>
-          </div>
-          <div class="capital-item">
-            <span class="label">Invested in Strategies</span>
-            <span class="value">{{ formatCurrency(userStore.capital_used) }}</span>
-          </div>
-          <div class="capital-item">
-            <span class="label">Available Capital</span>
-            <span class="value">{{ formatCurrency(userStore.capital_remaining) }}</span>
-          </div>
+    <div class="tickrule tickrule--major" />
 
-        </div>
-      </section>
+    <!-- Capital is one quantity split two ways, so the total leads and the
+         split sits under it rather than as three equal tiles. -->
+    <section class="capital">
+      <div>
+        <p class="spec">Total capital</p>
+        <p class="figure capital-total">{{ formatCurrency(totalCapital) }}</p>
+      </div>
 
-      <section class="holdings-section">
-        <h2>Invested Strategies</h2>
-        <div v-if="userStore.strategies.length === 0" class="no-holdings">
-          <p>No strategies invested in yet.</p>
+      <dl class="capital-split">
+        <div>
+          <dt class="spec">Allocated</dt>
+          <dd class="figure capital-part">
+            {{ formatCurrency(userStore.capital_used) }}
+          </dd>
         </div>
-        <div v-else class="holdings-list">
-          <div v-for="strategy in userStore.strategies" :key="strategy?.id || 0" class="holding-item">
-            <h3>{{ strategy.name }}</h3>
-            <p><strong>Invested:</strong> {{ formatCurrency(strategy.capital) }}</p>
-            <p><strong>Current Value:</strong> {{ formatCurrency(strategy.capital_used) }}</p>
-            <p><strong>P&L:</strong> <span :class="pnlClass(strategy.pnl)">{{ formatCurrency(strategy.unrealized_pnl)
-                }}</span></p>
-          </div>
+        <div>
+          <dt class="spec">Available</dt>
+          <dd class="figure capital-part">
+            {{ formatCurrency(userStore.capital) }}
+          </dd>
         </div>
-      </section>
-    </div>
+      </dl>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2 class="section-title">Positions</h2>
+        <NuxtLink to="/strategies" class="section-action">All strategies</NuxtLink>
+      </div>
+
+      <div v-if="!userStore.strategies.length" class="empty">
+        <p class="empty-lead">No capital allocated.</p>
+        <p class="empty-body">
+          Pick a strategy and allocate to it. Orders are placed automatically
+          while the market is open.
+        </p>
+        <NuxtLink to="/strategies" class="btn btn-primary">Browse strategies</NuxtLink>
+      </div>
+
+      <table v-else class="table">
+        <thead>
+          <tr>
+            <th class="spec">Strategy</th>
+            <th class="spec num">Allocated</th>
+            <th class="spec num">Deployed</th>
+            <th class="spec num">Unrealised</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="strategy in userStore.strategies" :key="strategy?.id || 0">
+            <td>
+              <NuxtLink :to="`/strategies/${strategy.id}`" class="table-link">
+                {{ strategy.name }}
+              </NuxtLink>
+              <span v-if="strategy.run_tf" class="spec table-tf">{{
+                strategy.run_tf
+              }}</span>
+            </td>
+            <td class="figure num">{{ formatCurrency(strategy.capital) }}</td>
+            <td class="figure num">{{ formatCurrency(strategy.capital_used) }}</td>
+            <td class="figure num" :class="directionClass(strategy.unrealized_pnl)">
+              {{ formatSigned(strategy.unrealized_pnl) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p v-if="userStore.strategies.length && !hasFills" class="note">
+        No fills yet, so unrealised P&amp;L is zero across the book. Strategies
+        place orders between 09:15 and 15:30 IST on trading days.
+      </p>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from "vue";
 import { useUserStore } from "@/store/user";
 
 const userStore = useUserStore();
 
-onMounted(async () => {
-  const userId = userStore?.userId;
-  const token = userStore?.token;
+/**
+ * `capital` holds uninvested cash: allocating to a strategy decrements it.
+ * `capital_remaining` is decremented identically, so it carries no extra
+ * information. Showing `capital` as the total made the three figures fail to
+ * reconcile -- allocated plus available exceeded it.
+ */
+const totalCapital = computed(
+  () => Number(userStore.capital ?? 0) + Number(userStore.capital_used ?? 0),
+);
 
-  if (!userId || !token) {
-    console.log("User not logged in, redirecting to login page.");
-    navigateTo('/login');
+const hasFills = computed(() =>
+  userStore.strategies.some(
+    (s: { capital_used?: number; unrealized_pnl?: number }) =>
+      Number(s.capital_used ?? 0) !== 0 || Number(s.unrealized_pnl ?? 0) !== 0,
+  ),
+);
+
+onMounted(async () => {
+  if (!userStore?.userId || !userStore?.token) {
+    navigateTo("/login");
     return;
   }
 
-  await userStore.fetchUser()
+  await userStore.fetchUser();
   await userStore.fetchUserStrategies();
-})
-
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-};
-
-const pnlClass = (pnl: number) => {
-  if (pnl > 0) return 'pnl-positive';
-  if (pnl < 0) return 'pnl-negative';
-  return 'pnl-neutral';
-};
-
+});
 
 definePageMeta({
-  layout: 'default'
+  layout: "default",
 });
 </script>
 
 <style scoped>
-.dashboard-page-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-  background-color: #f0f2f5;
-  /* Light grey background */
-  min-height: 100vh;
-  font-family: 'Roboto', 'Arial', sans-serif;
+.page {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: clamp(1.75rem, 4vw, 3rem) var(--gutter) 4rem;
 }
 
-.dashboard-container {
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.head-name {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  margin-top: 0.375rem;
+}
+
+.head-meta {
+  padding-bottom: 0.375rem;
+}
+
+/* --- Capital ------------------------------------------------------------- */
+
+.capital {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: clamp(2rem, 6vw, 5rem);
+  padding: 2.25rem 0 2.5rem;
+}
+
+.capital-total {
+  margin: 0.5rem 0 0;
+  font-size: clamp(2.75rem, 7vw, 4.25rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.capital-split {
+  display: flex;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  margin: 0;
+  padding-bottom: 0.5rem;
+}
+
+.capital-split dt {
+  margin-bottom: 0.375rem;
+}
+
+.capital-part {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-muted);
+}
+
+/* --- Sections ------------------------------------------------------------ */
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.section-title {
+  font-size: 1.125rem;
+}
+
+.section-action {
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule-strong);
+  padding-bottom: 2px;
+}
+
+.section-action:hover {
+  color: var(--text);
+  border-bottom-color: var(--ink);
+}
+
+/* --- Table --------------------------------------------------------------- */
+
+.table {
   width: 100%;
-  max-width: 1200px;
-  background-color: #ffffff;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-collapse: collapse;
 }
 
-.dashboard-header {
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e0e0e0;
+.table th,
+.table td {
+  padding: 0.9375rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
 }
 
-.dashboard-header h1 {
-  font-size: 2.2em;
-  color: #1A237E;
-  /* Deep Indigo */
-  margin-bottom: 5px;
-}
-
-.user-details p {
-  font-size: 1em;
-  color: #555;
-}
-
-.capital-summary-section,
-.holdings-section {
-  margin-bottom: 30px;
-}
-
-.capital-summary-section h2,
-.holdings-section h2 {
-  font-size: 1.8em;
-  color: #283593;
-  /* Indigo */
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.capital-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-}
-
-.capital-item {
-  background-color: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-}
-
-.capital-item .label {
-  font-size: 0.9em;
-  color: #666;
-  margin-bottom: 8px;
+.table th {
+  padding-top: 1rem;
+  padding-bottom: 0.625rem;
   font-weight: 500;
 }
 
-.capital-item .value {
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #333;
+.table th:first-child,
+.table td:first-child {
+  padding-left: 0;
 }
 
-.pnl-positive {
-  color: #2E7D32;
-  /* Green */
+.table th:last-child,
+.table td:last-child {
+  padding-right: 0;
 }
 
-.pnl-negative {
-  color: #C62828;
-  /* Red */
+.num {
+  text-align: right;
 }
 
-.pnl-neutral {
-  color: #555;
-  /* Grey for neutral P&L */
+.table-link {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
 }
 
-.no-holdings {
-  text-align: center;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  color: #777;
+.table-link:hover {
+  border-bottom-color: var(--ink);
 }
 
-.holdings-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+.table-tf {
+  display: block;
+  margin-top: 0.1875rem;
+  font-size: 0.625rem;
 }
 
-.holding-item {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
-  border: 1px solid #e8e8e8;
+/* --- Empty and notes ----------------------------------------------------- */
+
+.empty {
+  padding: 3.5rem 0 3rem;
+  max-width: 30rem;
 }
 
-.holding-item h3 {
-  font-size: 1.3em;
-  color: #3949AB;
-  /* Indigo */
-  margin-bottom: 10px;
+.empty-lead {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
 }
 
-.holding-item p {
-  font-size: 0.95em;
-  color: #444;
-  margin-bottom: 6px;
-  line-height: 1.5;
+.empty-body {
+  margin: 0 0 1.5rem;
+  color: var(--text-muted);
 }
 
-.holding-item p strong {
-  color: #222;
+.note {
+  margin: 1.25rem 0 0;
+  padding-left: 0.875rem;
+  border-left: 2px solid var(--rule-strong);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 42rem;
+}
+
+@media (max-width: 40rem) {
+  .table th:nth-child(3),
+  .table td:nth-child(3) {
+    display: none;
+  }
 }
 </style>

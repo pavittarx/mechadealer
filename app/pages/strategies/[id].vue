@@ -1,106 +1,162 @@
 <template>
-  <div class="page-container">
-    <div v-if="strategy">
-      <h1>{{ strategy.name }}</h1>
-      <p class="strategy-description">{{ strategy.description }}</p>
+  <div class="page">
+    <template v-if="strategy">
+      <header class="head">
+        <div>
+          <NuxtLink to="/strategies" class="spec back">← All strategies</NuxtLink>
+          <h1 class="head-title">{{ strategy.name }}</h1>
+          <p class="head-desc">{{ strategy.description || "No description." }}</p>
+        </div>
 
-      <div class="details-grid">
-        <div class="detail-item">
-          <span class="label">Total Capital</span>
-          <span class="value">{{ formatCurrency(strategy.capital) }}</span>
+        <div class="badges">
+          <span class="badge" :class="strategy.is_active ? 'badge--on' : 'badge--off'">
+            {{ strategy.is_active ? "Running" : "Stopped" }}
+          </span>
+          <span class="badge">{{ strategy.run_tf }}</span>
         </div>
-        <div class="detail-item">
-          <span class="label">Capital Used</span>
-          <span class="value">{{ formatCurrency(strategy.capital_used) }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Capital Available</span>
-          <span class="value">{{ formatCurrency(strategy.capital_remaining) }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="label">Units</span>
-          <span class="value">{{ strategy.units }}</span>
-        </div>
-      </div>
+      </header>
 
-      <div class="performance-section">
-        <h2>Performance</h2>
-        <div class="details-grid">
-          <div class="detail-item">
-            <span class="label">Realized P&L</span>
-            <span class="value" :class="pnlClass(strategy.pnl)">
-              {{ formatCurrency(strategy.pnl) }}
-            </span>
+      <div class="tickrule tickrule--major" />
+
+      <section class="block">
+        <h2 class="spec block-title">Capital</h2>
+        <dl class="grid">
+          <div class="cell">
+            <dt class="spec">Pool</dt>
+            <dd class="figure cell-value">{{ formatCurrency(strategy.capital) }}</dd>
           </div>
-          <div class="detail-item">
-            <span class="label">Unrealized P&L</span>
-            <span class="value" :class="pnlClass(strategy.unrealized_pnl)">
-              {{ formatCurrency(strategy.unrealized_pnl) }}
-            </span>
+          <div class="cell">
+            <dt class="spec">Deployed</dt>
+            <dd class="figure cell-value">
+              {{ formatCurrency(strategy.capital_used) }}
+            </dd>
           </div>
-          <div class="detail-item">
-            <span class="label">Status</span>
-            <span class="value">{{ strategy.is_active ? 'Active' : 'Inactive' }}</span>
+          <div class="cell">
+            <dt class="spec">Idle</dt>
+            <dd class="figure cell-value">
+              {{ formatCurrency(strategy.capital_remaining) }}
+            </dd>
           </div>
-          <div class="detail-item">
-            <span class="label">Created</span>
-            <span class="value">{{ new Date(strategy.created_at).toLocaleDateString() }}</span>
+          <div class="cell">
+            <dt class="spec">Units issued</dt>
+            <dd class="figure cell-value">{{ formatUnits(strategy.units) }}</dd>
           </div>
-        </div>
-      </div>
+        </dl>
+      </section>
+
+      <section class="block">
+        <h2 class="spec block-title">Performance</h2>
+        <dl class="grid">
+          <div class="cell">
+            <dt class="spec">Realised</dt>
+            <dd class="figure cell-value" :class="directionClass(strategy.pnl)">
+              {{ formatSigned(strategy.pnl) }}
+            </dd>
+          </div>
+          <div class="cell">
+            <dt class="spec">Unrealised</dt>
+            <dd
+              class="figure cell-value"
+              :class="directionClass(strategy.unrealized_pnl)"
+            >
+              {{ formatSigned(strategy.unrealized_pnl) }}
+            </dd>
+          </div>
+          <div class="cell">
+            <dt class="spec">Unit price</dt>
+            <dd class="figure cell-value">{{ unitPrice }}</dd>
+          </div>
+          <div class="cell">
+            <dt class="spec">Live since</dt>
+            <dd class="figure cell-value">{{ liveSince }}</dd>
+          </div>
+        </dl>
+
+        <p v-if="!hasFills" class="note">
+          No fills recorded yet, so both figures are zero. This strategy places
+          orders on {{ strategy.run_tf }} bars between 09:15 and 15:30 IST.
+        </p>
+      </section>
 
       <div class="actions">
-        <button class="btn btn-primary" @click="openInvestDialog">
-          Invest
-        </button>
-        <button class="btn btn-outline" @click="openWithdrawDialog">
-          Withdraw
-        </button>
+        <button class="btn btn-primary" @click="openInvestDialog">Allocate</button>
+        <button class="btn btn-outline" @click="openWithdrawDialog">Withdraw</button>
       </div>
-    </div>
+    </template>
 
-    <div v-else>
-      <p>Loading strategy details or strategy not found...</p>
-    </div>
+    <p v-else class="loading">Loading strategy…</p>
 
-    <!-- Investment Dialog -->
-    <dialog ref="investDialog" class="dialog">
-      <div class="dialog-content">
-        <h3>Invest in {{ strategy?.name }}</h3>
-        <div class="form-group">
-          <label for="investAmount">Amount to Invest</label>
-          <input type="number" id="investAmount" v-model="investAmount" class="input" placeholder="Enter amount"
-            min="0" />
+    <!-- Allocate -->
+    <dialog ref="investDialog" class="dialog" @close="resetInvest">
+      <form class="dialog-body" method="dialog" @submit.prevent="confirmInvestment">
+        <h2 class="dialog-title">Allocate to {{ strategy?.name }}</h2>
+        <p class="dialog-sub">
+          You are issued units at the strategy's current price.
+        </p>
+
+        <div class="field">
+          <label for="investAmount" class="spec">Amount (₹)</label>
+          <input
+            id="investAmount"
+            v-model.number="investAmount"
+            class="input"
+            type="number"
+            min="1"
+            step="1"
+          >
         </div>
+
+        <p v-if="investError" class="error" role="alert">{{ investError }}</p>
+
         <div class="dialog-actions">
-          <button class="btn btn-outline" @click="closeInvestDialog">Cancel</button>
-          <button class="btn btn-primary" @click="confirmInvestment">Confirm</button>
+          <button type="button" class="btn btn-outline" @click="closeInvestDialog">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" :disabled="investPending">
+            {{ investPending ? "Allocating…" : "Allocate" }}
+          </button>
         </div>
-      </div>
+      </form>
     </dialog>
 
-    <!-- Withdraw Dialog -->
-    <dialog ref="withdrawDialog" class="dialog">
-      <div class="dialog-content">
-        <h3>Withdraw from {{ strategy?.name }}</h3>
-        <div class="form-group">
-          <label for="withdrawAmount">Amount to Withdraw</label>
-          <input type="number" id="withdrawAmount" v-model="withdrawAmount" class="input" placeholder="Enter amount"
-            min="0" :max="strategy?.capital_used || 0" />
+    <!-- Withdraw -->
+    <dialog ref="withdrawDialog" class="dialog" @close="resetWithdraw">
+      <form class="dialog-body" method="dialog" @submit.prevent="confirmWithdrawal">
+        <h2 class="dialog-title">Withdraw from {{ strategy?.name }}</h2>
+        <p class="dialog-sub">Units are redeemed at the strategy's current price.</p>
+
+        <div class="field">
+          <label for="withdrawAmount" class="spec">Amount (₹)</label>
+          <input
+            id="withdrawAmount"
+            v-model.number="withdrawAmount"
+            class="input"
+            type="number"
+            min="1"
+            step="1"
+            :max="strategy?.capital || 0"
+          >
         </div>
+
+        <p v-if="withdrawError" class="error" role="alert">{{ withdrawError }}</p>
+
         <div class="dialog-actions">
-          <button class="btn btn-outline" @click="closeWithdrawDialog">Cancel</button>
-          <button class="btn btn-primary" @click="confirmWithdrawal">Confirm</button>
+          <button type="button" class="btn btn-outline" @click="closeWithdrawDialog">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" :disabled="withdrawPending">
+            {{ withdrawPending ? "Withdrawing…" : "Withdraw" }}
+          </button>
         </div>
-      </div>
+      </form>
     </dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { useUserStore } from '~/store/user';
+import { computed, onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
+import { useUserStore } from "~/store/user";
 
 const route = useRoute();
 const userStore = useUserStore();
@@ -133,24 +189,51 @@ const investDialog = ref<HTMLDialogElement | null>(null);
 const withdrawDialog = ref<HTMLDialogElement | null>(null);
 const investAmount = ref<number>(0);
 const withdrawAmount = ref<number>(0);
+const investError = ref("");
+const withdrawError = ref("");
+const investPending = ref(false);
+const withdrawPending = ref(false);
+
+const hasFills = computed(
+  () =>
+    Number(strategy.value?.capital_used ?? 0) !== 0 ||
+    Number(strategy.value?.pnl ?? 0) !== 0 ||
+    Number(strategy.value?.unrealized_pnl ?? 0) !== 0,
+);
+
+/** Capital per unit. Undefined before anyone has allocated. */
+const unitPrice = computed(() => {
+  const units = Number(strategy.value?.units ?? 0);
+  if (!units) return "—";
+  return formatCurrency(Number(strategy.value?.capital ?? 0) / units);
+});
+
+const liveSince = computed(() => {
+  const created = strategy.value?.created_at;
+  if (!created) return "—";
+  return new Date(created).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+});
 
 async function fetchStrategyById(id: number) {
   const runtimeConfig = useRuntimeConfig();
   const baseUrl = runtimeConfig.public.baseUrl;
 
   try {
-    const url = `${baseUrl}/strategies/${id}`;
-    const res: StrategyRes = await $fetch(url, {
+    const res: StrategyRes = await $fetch(`${baseUrl}/strategies/${id}`, {
       method: "GET",
     });
 
     if (res.is_error) {
-      throw new Error(res.message || "Error fetching user data");
+      throw new Error(res.message || "Could not load this strategy");
     }
 
     return res.data as Strategy;
   } catch (error) {
-    console.error("Error fetching user:", error);
+    console.error("Error fetching strategy:", error);
   }
 }
 
@@ -158,282 +241,246 @@ onMounted(async () => {
   strategy.value = await fetchStrategyById(parseInt(strategyId));
 });
 
-const formatCurrency = (value: number) => {
-  if (typeof value !== 'number') return 'N/A';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'INR' }).format(value);
-};
+const openInvestDialog = () => investDialog.value?.showModal();
+const closeInvestDialog = () => investDialog.value?.close();
+const openWithdrawDialog = () => withdrawDialog.value?.showModal();
+const closeWithdrawDialog = () => withdrawDialog.value?.close();
 
-const pnlClass = (pnl: number) => {
-  if (typeof pnl !== 'number') return 'pnl-neutral';
-  if (pnl > 0) return 'pnl-positive';
-  if (pnl < 0) return 'pnl-negative';
-  return 'pnl-neutral';
-};
-
-// Dialog functions
-const openInvestDialog = () => {
-  investDialog.value?.showModal();
-};
-
-const closeInvestDialog = () => {
-  investDialog.value?.close();
+const resetInvest = () => {
   investAmount.value = 0;
+  investError.value = "";
 };
 
-const openWithdrawDialog = () => {
-  withdrawDialog.value?.showModal();
-};
-
-const closeWithdrawDialog = () => {
-  withdrawDialog.value?.close();
+const resetWithdraw = () => {
   withdrawAmount.value = 0;
+  withdrawError.value = "";
 };
 
-const investInStrategy = async (amount: number) => {
+async function move(path: string, amount: number) {
   const runtimeConfig = useRuntimeConfig();
-  const baseUrl = runtimeConfig.public.baseUrl;
-
-  try {
-    const url = `${baseUrl}/strategies/invest`;
-    const payload = {
-      strategy_id: parseInt(strategyId),
-      amount: amount
-    };
-
-    const res: StrategyRes = await $fetch(url, {
+  const res: StrategyRes = await $fetch(
+    `${runtimeConfig.public.baseUrl}${path}`,
+    {
       method: "POST",
-      body: payload,
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    });
+      body: { strategy_id: parseInt(strategyId), amount },
+      headers: { Authorization: `Bearer ${userStore.token}` },
+    },
+  );
 
-    if (res.is_error) {
-      throw new Error(res.message || "Error investing in strategy");
-    }
-
-    // Refresh strategy data after successful investment
-    strategy.value = await fetchStrategyById(parseInt(strategyId));
-  } catch (error) {
-    console.error("Error investing in strategy:", error);
-    throw error;
+  if (res.is_error) {
+    throw new Error(res.message || "That did not go through");
   }
-};
 
-const withdrawFromStrategy = async (amount: number) => {
-  const runtimeConfig = useRuntimeConfig();
-  const baseUrl = runtimeConfig.public.baseUrl;
+  strategy.value = await fetchStrategyById(parseInt(strategyId));
+  await userStore.fetchUser();
+  await userStore.fetchUserStrategies();
+}
 
-  try {
-    const url = `${baseUrl}/strategies/withdraw`;
-    const payload = {
-      strategy_id: parseInt(strategyId),
-      amount: amount
-    };
-
-    const res: StrategyRes = await $fetch(url, {
-      method: "POST",
-      body: payload,
-      headers: {
-        'Authorization': `Bearer ${userStore.token}`
-      }
-    });
-
-    if (res.is_error) {
-      throw new Error(res.message || "Error withdrawing from strategy");
-    }
-
-    // Refresh strategy data after successful withdrawal
-    strategy.value = await fetchStrategyById(parseInt(strategyId));
-  } catch (error) {
-    console.error("Error withdrawing from strategy:", error);
-    throw error;
-  }
-};
-
+// Failures used to reach the console only, so the dialog just sat there.
 const confirmInvestment = async () => {
+  investError.value = "";
+
+  if (!investAmount.value || investAmount.value <= 0) {
+    investError.value = "Enter an amount greater than zero.";
+    return;
+  }
+
+  investPending.value = true;
   try {
-    await investInStrategy(investAmount.value);
+    await move("/strategies/invest", investAmount.value);
     closeInvestDialog();
-  } catch (error) {
-    console.error("Error during investment:", error);
-    // Handle error (show notification, etc.)
+  } catch (e) {
+    investError.value = (e as Error).message;
+  } finally {
+    investPending.value = false;
   }
 };
 
 const confirmWithdrawal = async () => {
+  withdrawError.value = "";
+
+  if (!withdrawAmount.value || withdrawAmount.value <= 0) {
+    withdrawError.value = "Enter an amount greater than zero.";
+    return;
+  }
+
+  withdrawPending.value = true;
   try {
-    await withdrawFromStrategy(withdrawAmount.value);
+    await move("/strategies/withdraw", withdrawAmount.value);
     closeWithdrawDialog();
-  } catch (error) {
-    console.error("Error during withdrawal:", error);
-    // Handle error (show notification, etc.)
+  } catch (e) {
+    withdrawError.value = (e as Error).message;
+  } finally {
+    withdrawPending.value = false;
   }
 };
 
 definePageMeta({
-  layout: 'default'
+  layout: "default",
 });
 </script>
 
 <style scoped>
-.page-container {
-  padding: 30px;
-  background-color: #ffffff;
-  border-radius: 8px;
-  margin: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+.page {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: clamp(1.75rem, 4vw, 3rem) var(--gutter) 4rem;
 }
 
-h1 {
-  font-size: 2.2em;
-  color: #1A237E;
-  margin-bottom: 10px;
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
 }
 
-.strategy-description {
-  font-size: 1.1em;
-  color: #555;
-  margin-bottom: 25px;
-  line-height: 1.6;
+.back {
+  display: inline-block;
+  margin-bottom: 0.875rem;
+  color: var(--text-muted);
+  text-decoration: none;
 }
 
-.details-grid {
+.back:hover {
+  color: var(--text);
+}
+
+.head-title {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.head-desc {
+  margin: 0.625rem 0 0;
+  color: var(--text-muted);
+  max-width: 44rem;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-family: var(--font-data);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.3125rem 0.625rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  color: var(--text-muted);
+}
+
+.badge--on {
+  border-color: var(--long);
+  color: var(--long);
+}
+
+.badge--off {
+  border-color: var(--rule-strong);
+}
+
+/* --- Blocks -------------------------------------------------------------- */
+
+.block {
+  padding: 2.25rem 0 0;
+}
+
+.block-title {
+  margin: 0 0 1.25rem;
+}
+
+.grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1.75rem clamp(1.5rem, 4vw, 3rem);
+  margin: 0;
 }
 
-.detail-item {
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 6px;
-  border: 1px solid #e8e8e8;
+.cell dt {
+  margin-bottom: 0.4375rem;
 }
 
-.detail-item .label {
-  display: block;
-  font-size: 0.9em;
-  color: #666;
-  margin-bottom: 5px;
+.cell-value {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.625rem);
   font-weight: 500;
 }
 
-.detail-item .value {
-  font-size: 1.1em;
-  font-weight: bold;
-  color: #333;
-}
-
-.performance-section,
-.investment-details-section {
-  margin-bottom: 30px;
-}
-
-.performance-section h2,
-.investment-details-section h2 {
-  font-size: 1.6em;
-  color: #283593;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.pnl-positive {
-  color: #2E7D32;
-}
-
-.pnl-negative {
-  color: #C62828;
-}
-
-.pnl-neutral {
-  color: #555;
+.note {
+  margin: 1.75rem 0 0;
+  padding-left: 0.875rem;
+  border-left: 2px solid var(--rule-strong);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 42rem;
 }
 
 .actions {
-  margin-top: 30px;
   display: flex;
-  gap: 15px;
-  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--rule-strong);
 }
 
-.btn {
-  padding: 10px 20px;
-  border-radius: 5px;
-  text-decoration: none;
-  font-size: 1em;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-  border: 1px solid transparent;
+.loading {
+  padding: 4rem 0;
+  color: var(--text-muted);
 }
 
-.btn-primary {
-  background-color: #FFC107;
-  color: #333;
-  font-weight: bold;
-}
-
-.btn-primary:hover {
-  background-color: #FFB300;
-}
-
-.btn-outline {
-  background-color: transparent;
-  border-color: #3949AB;
-  color: #3949AB;
-}
-
-.btn-outline:hover {
-  background-color: #e8eaf6;
-}
+/* --- Dialog -------------------------------------------------------------- */
 
 .dialog {
-  border: none;
-  border-radius: 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--panel-raised);
+  color: var(--text);
   padding: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 26rem;
+  width: calc(100% - 2rem);
 }
 
 .dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(21, 24, 27, 0.55);
 }
 
-.dialog-content {
-  padding: 24px;
-  min-width: 300px;
+.dialog-body {
+  padding: 1.75rem;
 }
 
-.dialog h3 {
-  margin: 0 0 20px 0;
-  color: #1A237E;
+.dialog-title {
+  font-size: 1.25rem;
 }
 
-.form-group {
-  margin-bottom: 20px;
+.dialog-sub {
+  margin: 0.5rem 0 1.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #666;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
 }
 
-.input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1em;
+.error {
+  margin: 1rem 0 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--short);
+  color: var(--short);
+  font-size: 0.875rem;
 }
 
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
 }
 </style>
