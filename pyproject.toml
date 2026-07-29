@@ -1,42 +1,130 @@
 [project]
+name = "mechadealer"
+version = "0.1.0"
+description = "Automated trading platform -- workspace root"
+readme = "README.md"
+requires-python = ">=3.12"
 dependencies = [
+  "app-server",
   "brokerlib",
   "coreutils",
   "datastore",
-  "kafka",
+  "datasync",
   "kafkalib",
-  "pendulum>=3.0.0",
-  "pydantic>=2.10.6",
-  "python-dotenv>=1.1.0",
+  "orders-management",
+  "stats-handler",
   "storelib",
+  "strategy-0",
   "strategylib",
 ]
-description = "Add your description here"
-name = "mechadealer"
-readme = "README.md"
-requires-python = ">=3.12"
-version = "0.1.0"
+
+# The root is an aggregator, not a package -- there is no source to build here.
+[tool.uv]
+package = false
+
 
 [tool.uv.workspace]
-members = [
-  "projects/*",
-  "libs/datastore",
-  "libs/storelib",
-  "libs/coreutils",
-  "libs/strategylib", "libs/brokerlib",
-]
+members = ["projects/*", "libs/*"]
 
 [tool.uv.sources]
-datastore = { workspace = true }
-kafkalib = { path = "libs/kafkalib", editable = true }
-storelib = { workspace = true }
-coreutils = { workspace = true }
-strategylib = { workspace = true }
+app-server = { workspace = true }
 brokerlib = { workspace = true }
+coreutils = { workspace = true }
+datastore = { workspace = true }
+datasync = { workspace = true }
+kafkalib = { workspace = true }
+orders-management = { workspace = true }
+stats-handler = { workspace = true }
+storelib = { workspace = true }
+strategy-0 = { workspace = true }
+strategylib = { workspace = true }
 
 [dependency-groups]
-dev = ["pyright>=1.1.398", "ruff>=0.11.2", "typing>=3.10.0.0"]
+dev = [
+  "poethepoet>=0.48.0",
+  "pyright>=1.1.411",
+  "pytest>=9.1.1",
+  "pytest-cov>=7.1.0",
+  "ruff>=0.16.0",
+]
+
+# ---------------------------------------------------------------------------
+# Task runner. Every task runs from the repository root -- no cd required.
+#   uv run poe <task>
+# ---------------------------------------------------------------------------
+[tool.poe.tasks.api]
+help = "Run the FastAPI application server"
+cmd = "uvicorn app_server.main:app --host 0.0.0.0 --port 8000 --reload"
+
+[tool.poe.tasks.datasync]
+help = "Run the market data sync service"
+cmd = "datasync"
+
+[tool.poe.tasks.orders]
+help = "Run the order management service"
+cmd = "orders-management"
+
+[tool.poe.tasks.stats]
+help = "Run the stats handler"
+cmd = "stats-handler"
+
+[tool.poe.tasks.strategy]
+help = "Run strategy_0"
+cmd = "strategy-0"
+
+[tool.poe.tasks.web]
+help = "Run the Nuxt frontend"
+cwd = "app"
+cmd = "bun run dev"
+
+[tool.poe.tasks.up]
+help = "Start the infrastructure containers"
+cmd = "docker compose --env-file .env -f containers/docker-compose.yaml up -d"
+
+[tool.poe.tasks.down]
+help = "Stop the infrastructure containers"
+cmd = "docker compose --env-file .env -f containers/docker-compose.yaml down"
+
+[tool.poe.tasks.logs]
+help = "Tail the infrastructure container logs"
+cmd = "docker compose --env-file .env -f containers/docker-compose.yaml logs -f"
+
+[tool.poe.tasks.lint]
+help = "Lint with ruff"
+cmd = "ruff check ."
+
+[tool.poe.tasks.fmt]
+help = "Format with ruff"
+cmd = "ruff format ."
+
+[tool.poe.tasks.typecheck]
+help = "Type-check with pyright"
+cmd = "pyright"
+
+[tool.poe.tasks.test]
+help = "Run the test suite"
+cmd = "pytest"
+
+[tool.poe.tasks.check]
+help = "Run lint, typecheck and tests"
+sequence = ["lint", "typecheck", "test"]
+
+[tool.ruff]
+target-version = "py312"
+exclude = [".venv", "app", "docs"]
+
+[tool.ruff.lint]
+# Pyflakes, pycodestyle errors, import sorting, and the bugbear checks that
+# catch real defects. Deliberately not the full opinionated set -- that would
+# mean rewriting working code for style alone.
+select = ["E4", "E7", "E9", "F", "I", "B"]
 
 [tool.pyright]
 reportMissingTypeArgument = true
 strictListInference = true
+include = ["libs", "projects", "tests"]
+exclude = ["**/.venv", "**/node_modules", "app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]

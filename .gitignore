@@ -38,3 +38,7 @@ logs
 .key
 
 *.Identifier
+
+# Generated / local runtime state
+.nuxtrc
+.creds/

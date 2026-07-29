@@ -4,21 +4,20 @@ version = "0.2.25"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "bcrypt>=4.3.0",
-  "psycopg2-binary>=2.9.10",
-  "pydantic>=2.10.6",
-  "python-dotenv>=1.1.0",
-  "requests>=2.32.3",
-  "sqlalchemy>=2.0.40",
+  "bcrypt>=5.0.0",
+  "psycopg[binary]>=3.3.4",
+  "pydantic>=2.12.5",
+  "python-dotenv>=1.2.2",
+  "requests>=2.34.2",
+  "sqlalchemy>=2.0.51",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-sources = ["."]
-
 [tool.hatch.build.targets.wheel]
-packages = ["__init__.py"]
-force-include = { "." = "storelib" }
+packages = ["src/storelib"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "README.md"]
