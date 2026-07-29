@@ -77,17 +77,31 @@ help = "Run the Nuxt frontend"
 cwd = "app"
 cmd = "bun run dev"
 
+# Compose ships either as a docker CLI plugin ("docker compose") or as the
+# standalone "docker-compose" binary; Colima and some Linux installs only have
+# the latter. Detect rather than assume, so these tasks work either way.
+# --env-file is required: compose resolves ${VAR} against a .env next to the
+# compose file, not against the repository root.
 [tool.poe.tasks.up]
 help = "Start the infrastructure containers"
-cmd = "docker compose --env-file .env -f containers/docker-compose.yaml up -d"
+shell = """
+if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
+$DC --env-file .env -f containers/docker-compose.yaml up -d
+"""
 
 [tool.poe.tasks.down]
 help = "Stop the infrastructure containers"
-cmd = "docker compose --env-file .env -f containers/docker-compose.yaml down"
+shell = """
+if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
+$DC --env-file .env -f containers/docker-compose.yaml down
+"""
 
 [tool.poe.tasks.logs]
 help = "Tail the infrastructure container logs"
-cmd = "docker compose --env-file .env -f containers/docker-compose.yaml logs -f"
+shell = """
+if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
+$DC --env-file .env -f containers/docker-compose.yaml logs -f
+"""
 
 [tool.poe.tasks.lint]
 help = "Lint with ruff"
