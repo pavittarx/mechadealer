@@ -14,9 +14,8 @@ storelib = { workspace = true }
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-sources = ["."]
-
 [tool.hatch.build.targets.wheel]
-packages = ["__init__.py"]
-force-include = { "." = "strategylib" }
+packages = ["src/strategylib"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "README.md"]

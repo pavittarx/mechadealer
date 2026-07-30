@@ -9,7 +9,6 @@ type UserResponse = {
     is_active: boolean;
     is_verified: boolean;
     capital: number;
-    capital_remaining: number;
     capital_used: number;
   };
 };
@@ -21,7 +20,6 @@ type UserStrategiesData = {
   units: number;
   unrealized_pnl: number;
   capital: number;
-  capital_remaining: number;
   capital_used: number;
   description: string;
   is_active: boolean;
@@ -45,7 +43,6 @@ export const useUserStore = defineStore("userStore", {
     is_active: false,
     is_verified: false,
     capital: 0,
-    capital_remaining: 0,
     capital_used: 0,
     strategies: [] as UserStrategiesData[],
   }),
@@ -57,8 +54,9 @@ export const useUserStore = defineStore("userStore", {
       this.token = token;
     },
     async fetchUser() {
-      if (!this.userId) {
-        console.error("Unable to fetch user, UserId not present.");
+      // Both are needed: the request is signed with the token, so guarding on
+      // userId alone sent a doomed call from every signed-out page.
+      if (!this.userId || !this.token) {
         return;
       }
 
@@ -86,7 +84,6 @@ export const useUserStore = defineStore("userStore", {
         this.is_active = res.data.is_active;
         this.is_verified = res.data.is_verified;
         this.capital = res.data.capital;
-        this.capital_remaining = res.data.capital_remaining;
         this.capital_used = res.data.capital_used;
         console.log("User data fetched successfully:", res);
       } catch (error) {
@@ -94,8 +91,7 @@ export const useUserStore = defineStore("userStore", {
       }
     },
     async fetchUserStrategies() {
-      if (!this.userId) {
-        console.error("Unable to fetch user holdings, UserId not present.");
+      if (!this.userId || !this.token) {
         return;
       }
 

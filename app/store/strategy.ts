@@ -5,7 +5,6 @@ type StrategiesData = {
   units: number;
   unrealized_pnl: number;
   capital: number;
-  capital_remaining: number;
   capital_used: number;
   description: string;
   is_active: boolean;
@@ -19,7 +18,10 @@ type StrategiesResponse = {
   data: StrategiesData[];
 };
 
-export const useStrategiesStore = defineStore("userStore", {
+// Pinia keys stores by this id. It read "userStore", the same id the user
+// store registers, so both composables resolved to one store and the
+// catalogue rendered the user's own positions instead of every strategy.
+export const useStrategiesStore = defineStore("strategiesStore", {
   state: () => ({
     strategies: [] as StrategiesData[],
   }),

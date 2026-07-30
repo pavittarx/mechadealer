@@ -7,6 +7,17 @@ export default defineNuxtConfig({
 
   css: ["~/assets/css/main.css"],
 
+  // Three roles: Archivo carries the industrial signage voice at display
+  // sizes, Instrument Sans reads quietly at body sizes, and IBM Plex Mono
+  // sets every figure with tabular numerals so columns of money line up.
+  fonts: {
+    families: [
+      { name: "Archivo", provider: "google", weights: [600, 700, 800] },
+      { name: "Instrument Sans", provider: "google", weights: [400, 500, 600] },
+      { name: "IBM Plex Mono", provider: "google", weights: [400, 500] },
+    ],
+  },
+
   modules: [
     "@nuxt/eslint",
     "@nuxt/fonts",
@@ -26,7 +37,12 @@ export default defineNuxtConfig({
   },
   security: {
     corsHandler: {
-      origin: ["http://localhost:3000", "http://localhost:8000"],
+      // NUXT_PUBLIC_BASE_URL already overrides runtimeConfig.public.baseUrl at
+      // runtime; this list is not auto-overridable, so it reads env directly.
+      origin: (
+        process.env.NUXT_CORS_ORIGINS ??
+        "http://localhost:3000,http://localhost:8000"
+      ).split(","),
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
       exposeHeaders: ["Content-Length", "X-Total-Count"],

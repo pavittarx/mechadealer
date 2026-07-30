@@ -1,217 +1,300 @@
 <template>
   <div :class="layoutCls">
-    <aside v-if="showSidebar" class="sidebar">
-      <nav class="sidebar-nav">
-        <NuxtLink to="/dashboard" class="nav-item" active-class="nav-item-active">
-          <Icon name="mdi:view-dashboard-outline" class="icon" /> Dashboard
-        </NuxtLink>
-        <NuxtLink to="/strategies" class="nav-item" active-class="nav-item-active">
-          <Icon name="mdi:chart-line" class="icon" /> All Strategies
-        </NuxtLink>
+    <aside v-if="showSidebar" class="rail">
+      <NuxtLink to="/dashboard" class="rail-mark">
+        <span class="rail-mark-name display">mechadealer</span>
+        <span class="rail-mark-sub spec">NSE · BSE</span>
+      </NuxtLink>
 
-        <div class="nav-section">
-          <h3 class="nav-section-title">My Invested Strategies</h3>
-          <ul v-if="userStore.strategies.length > 0" class="invested-strategies-list">
-            <li v-for="strategy in userStore.strategies" :key="strategy.id">
-              <NuxtLink :to="`/strategies/${strategy.id}`" class="nav-sub-item" active-class="nav-item-active">
-                {{ strategy.name }}
-              </NuxtLink>
-            </li>
-          </ul>
-          <p v-else class="no-invested-strategies">No strategies invested yet.</p>
-        </div>
+      <div class="tickrule tickrule--inverse rail-scale" />
+
+      <nav class="rail-nav">
+        <NuxtLink to="/dashboard" class="rail-link" active-class="is-active">
+          <Icon name="mdi:view-dashboard-outline" class="rail-icon" />
+          Dashboard
+        </NuxtLink>
+        <NuxtLink to="/strategies" class="rail-link" active-class="is-active">
+          <Icon name="mdi:chart-line" class="rail-icon" />
+          All strategies
+        </NuxtLink>
       </nav>
+
+      <div class="rail-group">
+        <h2 class="spec rail-group-title">Your positions</h2>
+
+        <ul v-if="userStore.strategies.length" class="rail-list">
+          <li v-for="strategy in userStore.strategies" :key="strategy.id">
+            <NuxtLink
+              :to="`/strategies/${strategy.id}`"
+              class="rail-sublink"
+              active-class="is-active"
+            >
+              <span class="rail-sublink-name">{{ strategy.name }}</span>
+              <span class="figure rail-sublink-value">{{
+                formatCurrencyCompact(strategy.capital)
+              }}</span>
+            </NuxtLink>
+          </li>
+        </ul>
+
+        <p v-else class="rail-empty">
+          Nothing allocated yet.
+          <NuxtLink to="/strategies" class="rail-empty-link">Browse strategies</NuxtLink>
+        </p>
+      </div>
+
+      <p class="rail-foot spec">Market 09:15–15:30 IST</p>
     </aside>
-    <main class="main-content">
+
+    <main class="main">
       <slot />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 
 const route = useRoute();
-
-const noSidebarRoutes = ['/', '/login'];
-
-const showSidebar = computed(() => {
-  return !noSidebarRoutes.includes(route.path);
-});
-
-const layoutCls = computed(() => {
-  return {
-    'app-layout': true,
-    'no-sidebar-layout': !showSidebar.value
-  };
-});
-
 const userStore = useUserStore();
 
+const noSidebarRoutes = ["/", "/login", "/register"];
+const showSidebar = computed(() => !noSidebarRoutes.includes(route.path));
+
+const layoutCls = computed(() => ({
+  shell: true,
+  "shell--bare": !showSidebar.value,
+}));
+
 onMounted(async () => {
-  // Fetch user data or strategies when the component mounts
   await userStore.fetchUserStrategies();
 });
-
 </script>
 
 <style scoped>
-.app-layout {
+.shell {
   display: flex;
   min-height: 100vh;
-  background-color: #f0f2f5;
-  font-family: 'Roboto', 'Arial', sans-serif;
+  background: var(--panel);
 }
 
-.app-layout.no-sidebar-layout .main-content {
-  margin-left: 0;
+.shell--bare .main {
   width: 100%;
-  /* Ensure main content takes full width */
 }
 
-.sidebar {
-  width: 260px;
-  background-color: #1A237E;
-  /* Deep Indigo - Reverted to original */
-  color: #E8EAF6;
-  /* Lighter Indigo/Lavender for text for better contrast */
-  padding: 20px 10px;
-  /* Adjusted padding */
-  border-right: 1px solid #283593;
-  /* Slightly lighter Indigo for border */
+/* --- Rail ---------------------------------------------------------------- */
+
+.rail {
+  width: var(--rail-w);
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  padding: 1.75rem 0 1.25rem;
+  background: var(--ink);
+  color: var(--text-inverse);
 }
 
-.sidebar-nav {
+.rail-mark {
+  display: block;
+  padding: 0 1.25rem 1.25rem;
+  text-decoration: none;
+}
+
+.rail-mark-name {
+  display: block;
+  font-size: 1.0625rem;
+  color: var(--text-inverse);
+}
+
+.rail-mark-sub {
+  display: block;
+  margin-top: 0.375rem;
+  color: var(--text-inverse-muted);
+}
+
+.rail-scale {
+  margin: 0 1.25rem 1.5rem;
+}
+
+.rail-nav {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  padding: 0 0.75rem;
+  gap: 0.125rem;
 }
 
-.nav-item,
-.nav-sub-item {
+.rail-link {
   display: flex;
   align-items: center;
-  padding: 12px 18px;
-  /* Adjusted padding */
-  color: #C5CAE9;
-  /* Indigo accent - lighter for inactive text */
+  gap: 0.75rem;
+  padding: 0.6875rem 0.75rem;
+  border-radius: 2px;
+  color: var(--text-inverse-muted);
   text-decoration: none;
-  border-radius: 6px;
-  transition: background-color 0.2s ease, color 0.2s ease, padding-left 0.2s ease;
-  font-size: 1em;
-  font-weight: 500;
-  /* Medium weight for readability */
+  font-size: 0.9375rem;
+  border-left: 2px solid transparent;
+  transition: color 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.nav-item .icon {
-  margin-right: 12px;
-  font-size: 1.4em;
-  /* Adjusted for SVG icons */
-  min-width: 24px;
-  /* Basic alignment */
-  text-align: center;
-  color: #AAB6FE;
-  /* Lighter Indigo/Lavender for better visibility */
-  opacity: 0.9;
-  /* Slight opacity for non-active */
-  transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
-  vertical-align: middle;
-  /* Better alignment with text */
+.rail-link:hover {
+  color: var(--text-inverse);
+  background: var(--ink-soft);
 }
 
-.nav-item:hover,
-.nav-sub-item:hover {
-  background-color: #283593;
-  /* Indigo - for hover */
-  color: #FFFFFF;
-  /* White text on hover */
+.rail-link.is-active {
+  color: var(--text-inverse);
+  background: var(--ink-soft);
+  border-left-color: var(--brand-bright);
 }
 
-.nav-item:hover .icon,
-.nav-sub-item:hover .icon {
-  opacity: 1;
-  transform: scale(1.1);
-  color: #FFFFFF;
-  /* White on hover for max contrast */
+.rail-icon {
+  font-size: 1.125rem;
+  flex-shrink: 0;
 }
 
-.nav-item-active {
-  background-color: #FFC107;
-  /* Amber - Reverted to original active color */
-  color: #1A237E;
-  /* Deep Indigo text for active amber background */
-  font-weight: 600;
-  /* Bolder for active */
+/* --- Positions ----------------------------------------------------------- */
+
+.rail-group {
+  margin-top: 2rem;
+  padding: 0 0.75rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
-.nav-item-active .icon {
-  color: #1A237E;
-  /* Deep Indigo to match text on Amber background */
-  opacity: 1;
+.rail-group-title {
+  padding: 0 0.75rem;
+  margin: 0 0 0.75rem;
+  color: var(--text-inverse-muted);
 }
 
-
-.nav-section {
-  margin-top: 25px;
-  padding-top: 15px;
-  border-top: 1px solid #303F9F;
-  /* Indigo shade for separator */
-}
-
-.nav-section-title {
-  font-size: 0.88em;
-  color: #9FA8DA;
-  /* Lighter Indigo accent for section title */
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 12px;
-  padding-left: 18px;
-  font-weight: 500;
-}
-
-.invested-strategies-list {
+.rail-list {
   list-style: none;
-  padding-left: 0;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.125rem;
 }
 
-.nav-sub-item {
-  padding-left: 32px;
-  /* Indent sub-items */
-  font-size: 0.95em;
-  color: #BDBDBD;
-  /* Lighter grey for sub-items, ensure contrast */
+.rail-sublink {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5625rem 0.75rem;
+  border-radius: 2px;
+  border-left: 2px solid transparent;
+  color: var(--text-inverse-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.nav-sub-item:hover {
-  color: #FFFFFF;
+.rail-sublink:hover {
+  color: var(--text-inverse);
+  background: var(--ink-soft);
 }
 
-.nav-sub-item.nav-item-active {
-  background-color: #FFA000;
-  /* Darker Amber for active sub-item */
-  color: #1A237E;
+.rail-sublink.is-active {
+  color: var(--text-inverse);
+  background: var(--ink-soft);
+  border-left-color: var(--brand-bright);
 }
 
-
-.no-invested-strategies {
-  font-size: 0.9em;
-  color: #9FA8DA;
-  /* Lighter Indigo accent */
-  padding: 10px 18px;
-  font-style: italic;
+.rail-sublink-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.main-content {
-  flex-grow: 1;
-  padding: 0;
-  overflow-y: auto;
-  background-color: #f0f2f5;
-  /* Reverted to original light grey */
+.rail-sublink-value {
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  color: var(--text-inverse-muted);
+}
+
+.rail-empty {
+  margin: 0;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-inverse-muted);
+  line-height: 1.5;
+}
+
+.rail-empty-link {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-inverse);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rail-foot {
+  margin: 1.5rem 0 0;
+  padding: 1rem 2rem 0;
+  border-top: 1px solid #262c32;
+  color: var(--text-inverse-muted);
+  font-size: 0.625rem;
+}
+
+/* --- Main ---------------------------------------------------------------- */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/* --- Small screens: the rail becomes a header ---------------------------- */
+
+@media (max-width: 52rem) {
+  .shell {
+    flex-direction: column;
+  }
+
+  .rail {
+    width: 100%;
+    padding: 1rem 0 0.75rem;
+  }
+
+  .rail-mark {
+    padding-bottom: 0.875rem;
+  }
+
+  .rail-scale {
+    margin-bottom: 0.875rem;
+  }
+
+  .rail-nav {
+    flex-direction: row;
+  }
+
+  .rail-group {
+    margin-top: 1rem;
+    overflow: visible;
+  }
+
+  .rail-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .rail-sublink {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+  }
+
+  .rail-sublink.is-active {
+    border-left-color: transparent;
+    border-bottom-color: var(--brand-bright);
+  }
+
+  .rail-foot {
+    display: none;
+  }
 }
 </style>

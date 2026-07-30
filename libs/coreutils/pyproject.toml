@@ -5,18 +5,17 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "apscheduler>=3.11.0",
-    "python-json-logger>=3.3.0",
-    "cryptography>=42.0.0"
+    "apscheduler>=3.11.3",
+    "python-json-logger>=4.1.0",
+    "cryptography>=49.0.0"
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-sources = ["."]
-
 [tool.hatch.build.targets.wheel]
-packages = ["__init__.py"]
-force-include = { "." = "coreutils" }
+packages = ["src/coreutils"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "README.md"]

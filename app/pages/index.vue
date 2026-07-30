@@ -1,284 +1,278 @@
-s<template>
-  <div class="landing-container">
-    <header class="hero-section">
-      <img src="/mechadealer_logo.png" alt="Mechadealer Logo" class="logo" />
-      <h1>Welcome to Mechadealer</h1>
-      <p class="subtitle">Empowering Retail Investors with Automated Trading Strategies</p>
-      <NuxtLink to="/login" class="cta-button">Login to Access Strategies</NuxtLink>
+<template>
+  <div class="landing">
+    <header class="topbar">
+      <span class="display topbar-mark">mechadealer</span>
+      <NuxtLink to="/login" class="topbar-link">Sign in</NuxtLink>
     </header>
 
-    <section class="features-section">
-      <h2>Unlock Your Investment Potential</h2>
-      <div class="features-grid">
-        <div class="feature-item">
-          <Icon name="uil:chart-line" class="feature-icon" />
-          <h3>Automated Strategies</h3>
-          <p>Invest in a diverse range of professionally managed automated trading strategies.</p>
-        </div>
-        <div class="feature-item">
-          <Icon name="uil:monitor-heart-rate" class="feature-icon" />
-          <h3>Performance Metrics</h3>
-          <p>View key performance indicators and track the historical success of each strategy.</p>
-        </div>
-        <div class="feature-item">
-          <Icon name="uil:clock-eight" class="feature-icon" />
-          <h3>Real-Time Monitoring</h3>
-          <p>Monitor your investments and adjust your portfolio in real-time.</p>
-        </div>
-        <div class="feature-item">
-          <Icon name="uil:shield-check" class="feature-icon" />
-          <h3>Secure Platform</h3>
-          <p>Invest with confidence on our secure and reliable trading platform.</p>
-        </div>
+    <!-- The thesis: a rule fires and an order goes out without you watching.
+         The record below is the shape of a real signal, not a performance claim. -->
+    <section class="hero">
+      <p class="spec hero-eyebrow">Automated trading · NSE &amp; BSE</p>
+
+      <h1 class="display hero-line">
+        EMA&nbsp;4 crosses EMA&nbsp;8.<br >
+        The order goes out.<br >
+        <span class="hero-line-quiet">You were not watching.</span>
+      </h1>
+
+      <figure class="record">
+        <figcaption class="spec record-cap">Signal format</figcaption>
+        <div class="tickrule record-scale" />
+        <pre class="figure record-body">09:47:02 IST  IDEA.NSE  2M  EMA4&gt;EMA8  BUY 1 MARKET</pre>
+      </figure>
+
+      <div class="hero-actions">
+        <NuxtLink to="/login" class="btn btn-primary">Sign in</NuxtLink>
+        <NuxtLink to="/strategies" class="btn btn-outline">See the strategies</NuxtLink>
       </div>
+
+      <p class="demo">
+        <span class="spec">Demo account</span>
+        <span class="figure demo-creds">demo / demo1234</span>
+      </p>
     </section>
 
-    <section class="how-it-works-section">
-      <h2>How It Works</h2>
-      <div class="steps-container">
-        <div class="step-item">
-          <div class="step-number">1</div>
-          <h3>Sign Up</h3>
-          <p>Create your account in minutes and get verified.</p>
-        </div>
-        <div class="step-item">
-          <div class="step-number">2</div>
-          <h3>Explore Strategies</h3>
-          <p>Browse our curated list of automated trading strategies.</p>
-        </div>
-        <div class="step-item">
-          <div class="step-number">3</div>
-          <h3>Invest</h3>
-          <p>Choose your strategies and allocate your investment funds.</p>
-        </div>
-        <div class="step-item">
-          <div class="step-number">4</div>
-          <h3>Monitor & Adjust</h3>
-          <p>Track performance and manage your investments on the go.</p>
-        </div>
-      </div>
+    <div class="tickrule tickrule--major band-rule" />
+
+    <!-- A genuine pipeline, so the ordering carries information. -->
+    <section class="pipeline">
+      <h2 class="spec pipeline-title">What happens to your money</h2>
+
+      <ol class="steps">
+        <li v-for="step in steps" :key="step.n" class="step">
+          <span class="figure step-n">{{ step.n }}</span>
+          <div>
+            <h3 class="step-title">{{ step.title }}</h3>
+            <p class="step-body">{{ step.body }}</p>
+          </div>
+        </li>
+      </ol>
     </section>
 
-    <footer class="footer-section">
-      <p>&copy; {{ new Date().getFullYear() }} Mechadealer. All rights reserved.</p>
-      <nav>
-        <NuxtLink to="/about">About Us</NuxtLink> |
-        <NuxtLink to="/strategies">Strategies</NuxtLink> |
-        <NuxtLink to="/contact">Contact</NuxtLink> |
-        <NuxtLink to="/privacy">Privacy Policy</NuxtLink>
-      </nav>
+    <footer class="foot">
+      <div class="tickrule foot-rule" />
+      <div class="foot-inner">
+        <span class="spec">mechadealer · {{ new Date().getFullYear() }}</span>
+        <span class="spec">Market 09:15–15:30 IST</span>
+      </div>
     </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-// Using Nuxt Icon for feature icons, ensure @nuxt/icon module is installed and configured.
+const steps = [
+  {
+    n: "01",
+    title: "You allocate",
+    body: "Put capital into a strategy. You are issued units at the strategy's current price, and you can withdraw them again at any time.",
+  },
+  {
+    n: "02",
+    title: "Market data arrives",
+    body: "Bars stream in from the exchange every minute during market hours and are stored, then resampled onto each strategy's timeframe.",
+  },
+  {
+    n: "03",
+    title: "The rule fires",
+    body: "Each strategy reads its own timeframe and emits a signal when its condition is met. No signal, no order.",
+  },
+  {
+    n: "04",
+    title: "The order is placed",
+    body: "Signals become live broker orders, and fills are written back against the strategy so your position and P&L stay current.",
+  },
+];
+
+definePageMeta({
+  layout: "default",
+});
 </script>
 
 <style scoped>
-.landing-container {
-  font-family: 'Roboto', 'Arial', sans-serif;
-  color: #333;
-  line-height: 1.6;
-}
-
-.hero-section {
-  background: linear-gradient(135deg, #1A237E 0%, #283593 50%, #3949AB 100%);
-  /* Deep Indigo to Indigo */
-  color: white;
-  padding: 80px 20px;
-  text-align: center;
-}
-
-.logo {
-  max-width: 180px;
-  margin-bottom: 25px;
-}
-
-.hero-section h1 {
-  font-size: 3em;
-  margin-bottom: 15px;
-  font-weight: 700;
-}
-
-.subtitle {
-  font-size: 1.3em;
-  margin-bottom: 35px;
-  opacity: 0.9;
-  font-weight: 300;
-}
-
-.cta-button {
-  background-color: #FFC107;
-  /* Amber */
-  color: #333;
-  padding: 15px 35px;
-  text-decoration: none;
-  border-radius: 25px;
-  font-size: 1.1em;
-  font-weight: bold;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-.cta-button:hover {
-  background-color: #FFB300;
-  /* Darker Amber */
-  transform: translateY(-2px);
-}
-
-.features-section {
-  padding: 60px 20px;
-  text-align: center;
-  background-color: #f4f6f8;
-}
-
-.features-section h2 {
-  font-size: 2.2em;
-  margin-bottom: 50px;
-  color: #1A237E;
-  /* Deep Indigo */
-  font-weight: 600;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 30px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.feature-item {
-  background-color: #ffffff;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease;
-}
-
-.feature-item:hover {
-  transform: translateY(-5px);
-}
-
-.feature-icon {
-  font-size: 3.5em;
-  color: #3949AB;
-  /* Indigo */
-  margin-bottom: 20px;
-}
-
-.feature-item h3 {
-  font-size: 1.6em;
-  margin-bottom: 10px;
-  color: #333;
-  font-weight: 500;
-}
-
-.feature-item p {
-  font-size: 1em;
-  color: #555;
-}
-
-.how-it-works-section {
-  padding: 60px 20px;
-  text-align: center;
-}
-
-.how-it-works-section h2 {
-  font-size: 2.2em;
-  margin-bottom: 50px;
-  color: #1A237E;
-  /* Deep Indigo */
-  font-weight: 600;
-}
-
-.steps-container {
+.landing {
+  min-height: 100vh;
   display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  max-width: 1200px;
+  flex-direction: column;
+}
+
+/* --- Top bar ------------------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem var(--gutter);
+  max-width: var(--max);
+  width: 100%;
   margin: 0 auto;
 }
 
-.step-item {
-  flex-basis: calc(25% - 20px);
-  margin-bottom: 30px;
-  padding: 20px;
-  text-align: center;
+.topbar-mark {
+  font-size: 1.0625rem;
 }
 
-.step-number {
-  width: 50px;
-  height: 50px;
-  line-height: 50px;
-  border-radius: 50%;
-  background-color: #FFC107;
-  /* Amber */
-  color: #333;
-  font-size: 1.5em;
-  font-weight: bold;
-  margin: 0 auto 15px auto;
-}
-
-.step-item h3 {
-  font-size: 1.4em;
-  margin-bottom: 10px;
-  color: #333;
-  font-weight: 500;
-}
-
-.step-item p {
-  font-size: 0.95em;
-  color: #555;
-}
-
-.footer-section {
-  background-color: #263238;
-  /* Blue Grey Darken-3 */
-  color: #CFD8DC;
-  /* Blue Grey Lighten-4 */
-  text-align: center;
-  padding: 30px 20px;
-  font-size: 0.9em;
-}
-
-.footer-section nav a {
-  color: #FFC107;
-  /* Amber */
-  margin: 0 15px;
+.topbar-link {
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text);
   text-decoration: none;
-  transition: color 0.3s ease;
+  border-bottom: 1px solid var(--rule-strong);
+  padding-bottom: 2px;
 }
 
-.footer-section nav a:hover {
-  color: #FFA000;
-  /* Darker Amber */
-  text-decoration: underline;
+.topbar-link:hover {
+  border-bottom-color: var(--ink);
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .hero-section h1 {
-    font-size: 2.5em;
-  }
+/* --- Hero ---------------------------------------------------------------- */
 
-  .subtitle {
-    font-size: 1.1em;
-  }
+.hero {
+  max-width: var(--max);
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 3.5rem) var(--gutter) clamp(2.5rem, 6vw, 4rem);
+}
 
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
+.hero-eyebrow {
+  margin: 0 0 1.25rem;
+}
 
-  .step-item {
-    flex-basis: calc(50% - 20px);
+.hero-line {
+  font-size: clamp(1.875rem, 4.6vw, 3.375rem);
+  margin: 0;
+  max-width: 26ch;
+  animation: rise 0.5s ease-out both;
+}
+
+.hero-line-quiet {
+  color: var(--text-muted);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
   }
 }
 
-@media (max-width: 480px) {
-  .step-item {
-    flex-basis: 100%;
-  }
+/* --- Signal record ------------------------------------------------------- */
+
+.record {
+  margin: clamp(1.75rem, 4vw, 2.75rem) 0 0;
+  max-width: 40rem;
+}
+
+.record-cap {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.record-scale {
+  margin-bottom: 0.75rem;
+}
+
+.record-body {
+  margin: 0;
+  padding: 0;
+  font-size: clamp(0.6875rem, 1.6vw, 0.875rem);
+  color: var(--text);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* --- Actions ------------------------------------------------------------- */
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: clamp(1.5rem, 3.5vw, 2.25rem);
+}
+
+.demo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+}
+
+.demo-creds {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* --- Pipeline ------------------------------------------------------------ */
+
+.band-rule,
+.foot-rule {
+  max-width: var(--max);
+  width: 100%;
+  margin: 0 auto;
+}
+
+.band-rule {
+  margin-bottom: clamp(2.5rem, 6vw, 4rem);
+}
+
+.pipeline {
+  max-width: var(--max);
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--gutter) clamp(3rem, 8vw, 6rem);
+  flex: 1;
+}
+
+.pipeline-title {
+  margin: 0 0 2rem;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: clamp(1.75rem, 4vw, 3rem);
+}
+
+.step {
+  display: flex;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.step-n {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.step-title {
+  font-size: 1.0625rem;
+  margin: 0 0 0.4375rem;
+}
+
+.step-body {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+
+/* --- Foot ---------------------------------------------------------------- */
+
+.foot-inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: var(--max);
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem var(--gutter) 2rem;
 }
 </style>
