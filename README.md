@@ -6,6 +6,15 @@ strategy, monitor performance and adjust investments in real-time.
 
 For a deep dive please read the docs [here](./docs/README.md).
 
+## Live demo
+
+**https://mechadealer-web.vercel.app** — sign in with `demo` / `demo1234`.
+
+The frontend and API run on Vercel against a Neon Postgres database. The demo covers
+authentication, the strategy views and the invest/withdraw flows. It deliberately does
+not run the event pipeline — no Kafka, no QuestDB, no market data — so P&L stays at
+zero. [Deployment](./docs/deployment.md) has the details and the rest of the caveats.
+
 ## Quickstart
 
 Everything runs from the repository root. You never need to `cd` into a service
